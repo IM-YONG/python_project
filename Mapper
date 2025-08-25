@@ -1,0 +1,1403 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="hds.tech.rpms.project.service.dao.WbsMakeGenTaskDao">
+	<!--
+        Query Name  : hds.tech.rpms.project.service.dao.WbsMakeGenTaskDao.selectTaskWbsInfo
+        Description : WBS과제조회
+            since          author              description
+        ===========    =============    ===========================
+        2023.07.07         1527431               최초 생성
+    -->
+
+	<select id="selectTaskWbsInfo" parameterType="hashmap" resultType="hashmap">
+        <![CDATA[
+		/* hds.tech.rpms.project.service.dao.WbsMakeGenTaskDao.selectTaskWbsInfo : WBS과제조회  */
+		WITH CTE AS (
+		    SELECT  H.TASK_NO
+		          , NVL(NULLIF(L.TASK_TYPE_GQ,''), L.TASK_TYPE) TASK_TYPE
+		          , H.DEPTH_GP
+		          , H.DEPTH_NM
+		          , H.CHARGER_ID
+		          , D.USER_NM
+		          , H.PLAN_START_DATE
+		          , H.PLAN_END_DATE
+		          , H.PLAN_PROG_RATE
+		          , H.YY_GP
+		          , H.GATE_SET_YN_PMO
+		          , H.GATE_SET_ID_PMO
+		          , H.GATE_CHK_COMMENT_PMO
+		          , H.GATE_SET_YN
+		          , H.GATE_SET_ID
+		          , H.GATE_CHK_COMMENT
+		          , H.DEPT_CD
+		          , GROUP_CONCAT(CASE WHEN NULLIF(M.ITEM_CD,'') IS NOT NULL THEN CONCAT_WS('^', M.ITEM_CD, M.ITEM_NM, NVL(NULLIF(M.ESSENTIAL_YN,''),'N')) END ORDER BY M.ESSENTIAL_YN DESC, M.ITEM_CD) ITEM_INFO
+		          , GROUP_CONCAT(M.ITEM_CD ORDER BY M.ESSENTIAL_YN DESC, M.ITEM_CD) ITEM_CD
+		          , GROUP_CONCAT(M.ITEM_NM ORDER BY M.ESSENTIAL_YN DESC, M.ITEM_CD) ITEM_NM
+		      FROM  TB_TASK_WBS_DEPTH  H
+		      INNER JOIN TB_TASK_BASE_INFO  L
+		        ON  H.TASK_NO  = L.TASK_NO
+		      LEFT JOIN TB_TASK_WBS_ITEM  M
+		        ON  H.TASK_NO  = M.TASK_NO
+		        AND H.DEPTH_GP = M.DEPTH_GP
+		      LEFT JOIN TB_USER_INFO  D
+		        ON  H.CHARGER_ID  = D.USER_ID
+		      WHERE H.TASK_NO = #{TASK_NO}
+		      GROUP BY H.TASK_NO             , H.DEPTH_GP,
+		               L.TASK_TYPE           , L.TASK_TYPE_GQ,
+		               H.DEPTH_NM            , H.CHARGER_ID,
+		               H.PLAN_START_DATE     , H.PLAN_END_DATE,
+		               H.PLAN_PROG_RATE      , H.YY_GP,
+		               H.GATE_SET_YN_PMO     , H.GATE_SET_ID_PMO,
+		               H.GATE_CHK_COMMENT_PMO, H.GATE_SET_YN,
+		               H.GATE_SET_ID         , H.GATE_CHK_COMMENT,
+		               H.DEPT_CD             , D.USER_NM
+		)
+		SELECT  LEFT(H.DEPTH_GP,3) CODE_DEPTH_GP
+		      , H.*
+		  FROM  CTE  H
+		  ORDER BY H.TASK_NO, H.PLAN_START_DATE, DECODE_ORACLE(H.TASK_TYPE,'Q',H.TASK_TYPE,LEFT(H.DEPTH_GP,3))
+        ]]>
+    </select>
+
+	<!--
+        Query Name  : hds.tech.rpms.project.service.dao.WbsMakeGenTaskDao.selectTaskWbsInfoNew
+        Description : WBS과제조회NEW
+            since          author              description
+        ===========    =============    ===========================
+        2025.06.30         1531361               최초 생성
+    -->
+
+	<select id="selectTaskWbsInfoNew" parameterType="hashmap" resultType="hashmap">
+        <![CDATA[
+		/* hds.tech.rpms.project.service.dao.WbsMakeGenTaskDao.selectTaskWbsInfoNew : WBS과제조회NEW  */
+		WITH CTE AS (
+		    SELECT  H.TASK_NO
+		          , NVL(NULLIF(L.TASK_TYPE_GQ,''), L.TASK_TYPE) TASK_TYPE
+		          , H.DEPTH_GP
+		          , H.DEPTH_NM
+		          , H.CHARGER_ID
+		          , D.USER_NM
+		          , H.PLAN_START_DATE
+		          , H.PLAN_END_DATE
+		          , H.PLAN_PROG_RATE
+		          , H.YY_GP
+		          , H.GATE_SET_YN_PMO
+		          , H.GATE_SET_ID_PMO
+		          , H.GATE_CHK_COMMENT_PMO
+		          , H.GATE_SET_YN
+		          , H.GATE_SET_ID
+		          , H.GATE_CHK_COMMENT
+		          , H.DEPT_CD
+		          , M.ITEM_CD 
+		          , M.ITEM_NM 
+		          , IFNULL(M.PLAN_START_DATE, H.PLAN_START_DATE) AS PLAN_START_DATE_M
+		          , IFNULL(M.PLAN_END_DATE, H.PLAN_END_DATE) AS PLAN_END_DATE_M
+		          , IFNULL(M.PLAN_PROG_RATE, H.PLAN_PROG_RATE) AS PLAN_PROG_RATE_M
+		          , GROUP_CONCAT(CASE WHEN NULLIF(N.ATT_USER_ID,'') IS NOT NULL THEN CONCAT_WS('^', N.ATT_USER_ID, E.USER_NM) END) USER_INFO
+		          , GROUP_CONCAT(N.ATT_USER_ID) ATT_USER_ID
+		          , GROUP_CONCAT(E.USER_NM) ATT_USER_NM
+		      FROM  TB_TASK_WBS_DEPTH  H
+		      INNER JOIN TB_TASK_BASE_INFO  L
+		        ON  H.TASK_NO  = L.TASK_NO
+		      LEFT JOIN TB_TASK_WBS_ITEM  M
+		        ON  H.TASK_NO  = M.TASK_NO
+		        AND H.DEPTH_GP = M.DEPTH_GP
+		      LEFT JOIN TB_TASK_WBS_ATT_TNOP N
+		        ON  H.TASK_NO  = N.TASK_NO
+		        AND H.DEPTH_GP = N.DEPTH_GP
+		        AND M.ITEM_CD = N.ITEM_CD
+		      LEFT JOIN TB_USER_INFO  D
+		        ON  H.CHARGER_ID  = D.USER_ID
+		      LEFT JOIN TB_USER_INFO  E
+		        ON  N.ATT_USER_ID  = E.USER_ID
+		      WHERE H.TASK_NO = #{TASK_NO}
+		      GROUP BY H.TASK_NO             , H.DEPTH_GP,
+		               L.TASK_TYPE           , L.TASK_TYPE_GQ,
+		               H.DEPTH_NM            , H.CHARGER_ID,
+		               H.PLAN_START_DATE     , H.PLAN_END_DATE,
+		               H.PLAN_PROG_RATE      , H.YY_GP,
+		               H.GATE_SET_YN_PMO     , H.GATE_SET_ID_PMO,
+		               H.GATE_CHK_COMMENT_PMO, H.GATE_SET_YN,
+		               H.GATE_SET_ID         , H.GATE_CHK_COMMENT,
+		               H.DEPT_CD             , D.USER_NM,
+		               M.ITEM_CD             , M.ITEM_NM,
+		               M.PLAN_START_DATE     , M.PLAN_END_DATE,
+		               M.PLAN_PROG_RATE
+		)
+		SELECT  LEFT(H.DEPTH_GP,3) CODE_DEPTH_GP
+		      , H.*
+		  FROM  CTE  H
+		  ORDER BY H.TASK_NO, H.DEPTH_GP, H.ITEM_CD
+        ]]>
+    </select>
+
+	<!--
+        Query Name  : hds.tech.rpms.project.service.dao.WbsMakeGenTaskDao.selectUserNmInfo
+        Description : 과제참여인력조회
+            since          author              description
+        ===========    =============    ===========================
+        2025.06.30         1531361               최초 생성
+    -->
+
+	<select id="selectUserNmInfo" parameterType="hashmap" resultType="hashmap">
+        <![CDATA[
+		/* hds.tech.rpms.project.service.dao.WbsMakeGenTaskDao.selectUserNmInfo : 과제참여인력조회  */
+		SELECT  H.TASK_NO
+		      , H.ATT_USER_ID
+		      , M.USER_NM
+		      , M.DEPT_CD
+		      , D.DEPT_NM
+		      , M.JOBGRADE_CD
+		      , M.JOBGRADE_NM
+		      , M.ROLE_CD
+		      , M.ROLE_NM
+		  FROM  TB_TASK_WBS_ATT_TNOP  H
+		  LEFT  JOIN TB_USER_INFO  M
+		    ON  H.ATT_USER_ID = M.USER_ID
+		  LEFT  JOIN TB_DEPT_INFO  D
+		    ON  H.ATT_DEPT_CD = D.DEPT_CD
+		  WHERE H.TASK_NO = #{TASK_NO}
+ 		    AND DEPTH_GP = #{DEPTH_GP}
+ 		    AND ITEM_CD = #{ITEM_CD}
+        ]]>
+    </select>
+
+	<!--
+        Query Name  : hds.tech.rpms.project.service.dao.WbsMakeGenTaskDao.insertTaskWbs
+        Description : INSERT 과제 WBS 공통(검토)
+            since          author              description
+        ===========    =============    ===========================
+        2023.07.07         1527431               최초 생성
+    -->
+
+	<insert id="insertTaskWbs" parameterType="hashmap">
+        <![CDATA[
+		/* hds.tech.rpms.project.service.dao.WbsMakeGenTaskDao.insertTaskWbs : INSERT 과제 WBS 공통(검토)  */
+		INSERT INTO TB_TASK_WBS
+		          ( TASK_NO,
+					PROG_STAT,
+				    WBS_REG_DATE,
+					REG_ID,
+					REG_PGM,
+					REG_DDTT,
+					MOD_ID,
+					MOD_PGM,
+				    MOD_DDTT,
+				    DATA_GP 
+				  )
+			SELECT  #{TASK_NO},
+			        #{PROG_STAT},
+			        SYSDATE(),
+			        #{REG_ID},
+			        #{REG_PGM},
+			        SYSDATE(),
+			        #{MOD_ID},
+			        #{MOD_PGM},
+			        SYSDATE(),
+			        'OLD' 
+			  WHERE NOT EXISTS ( SELECT  'X'
+			                       FROM  TB_TASK_WBS  S
+			                       WHERE S.TASK_NO = #{TASK_NO} )
+        ]]>
+    </insert>
+    
+	<!--
+        Query Name  : hds.tech.rpms.project.service.dao.WbsMakeGenTaskDao.insertTaskWbsNew
+        Description : INSERT 과제 WBS 공통(검토) (NEW)
+            since          author              description
+        ===========    =============    ===========================
+        2025.07.08         1531361               최초 생성
+    -->
+
+	<insert id="insertTaskWbsNew" parameterType="hashmap">
+        <![CDATA[
+		/* hds.tech.rpms.project.service.dao.WbsMakeGenTaskDao.insertTaskWbsNew : INSERT 과제 WBS 공통(검토) (NEW)  */
+		INSERT INTO TB_TASK_WBS
+		          ( TASK_NO,
+					PROG_STAT,
+				    WBS_REG_DATE,
+					REG_ID,
+					REG_PGM,
+					REG_DDTT,
+					MOD_ID,
+					MOD_PGM,
+				    MOD_DDTT,
+				    DATA_GP 
+				  )
+			SELECT  #{TASK_NO},
+			        #{PROG_STAT},
+			        SYSDATE(),
+			        #{REG_ID},
+			        #{REG_PGM},
+			        SYSDATE(),
+			        #{MOD_ID},
+			        #{MOD_PGM},
+			        SYSDATE(),
+			        'NEW' 
+			  WHERE NOT EXISTS ( SELECT  'X'
+			                       FROM  TB_TASK_WBS  S
+			                       WHERE S.TASK_NO = #{TASK_NO} )
+        ]]>
+    </insert>
+    
+    <!--
+        Query Name  : hds.tech.rpms.project.service.dao.WbsMakeGenTaskDao.updateTaskWbs
+        Description : UPDATE 과제 WBS
+            since          author              description
+        ===========    =============    ===========================
+        2023.07.07         1527431               최초 생성
+    -->
+	<update id="updateTaskWbs" parameterType="hashmap">
+		/* hds.tech.rpms.project.service.dao.WbsMakeGenTaskDao.updateTaskWbs : 과제 WBS 저장  */
+		UPDATE  TB_TASK_WBS
+		  SET <if test='PROG_STAT != null and PROG_STAT != ""'>
+		  		PROG_STAT           = #{PROG_STAT},
+		  	  </if>
+		        WBS_REG_DATE        = SYSDATE(),
+		        MOD_ID              = #{MOD_ID},
+		        MOD_PGM             = #{MOD_PGM},
+		        MOD_DDTT            = SYSDATE()
+		  WHERE TASK_NO = #{TASK_NO}
+	</update>    
+
+	<update id="updateTaskBaseInfoFields" parameterType="hashmap">
+		/* hds.tech.rpms.project.service.dao.WbsMakeGenTaskDao.updateTaskBaseInfoFields : 과제단계상태변경  */
+		UPDATE  TB_TASK_BASE_INFO
+		  SET   MOD_ID          = #{MOD_ID}
+		      , MOD_PGM         = #{MOD_PGM}
+		      , MOD_DDTT        = SYSDATE()
+		      	<if test='TASK_DEPTH_STAT != null and TASK_DEPTH_STAT != ""'>
+		      , TASK_DEPTH_STAT = #{TASK_DEPTH_STAT}
+		  		</if>
+		      	<if test='TASK_DEPTH != null and TASK_DEPTH != ""'>
+		      , TASK_DEPTH = #{TASK_DEPTH}
+		  		</if>
+		  WHERE TASK_NO = #{TASK_NO}
+	</update>    
+
+	<!--
+        Query Name  : hds.tech.rpms.project.service.dao.WbsMakeGenTaskDao.upsertTaskWbsDepth
+        Description : 과제 WBS 단계 저장
+            since          author              description
+        ===========    =============    ===========================
+        2023.07.07         1527431               최초 생성
+    -->
+
+	<insert id="upsertTaskWbsDepth" parameterType="hashmap">
+		/* hds.tech.rpms.project.service.dao.WbsMakeGenTaskDao.upsertTaskWbsDepth : 과제 WBS 단계 저장  */
+		INSERT INTO TB_TASK_WBS_DEPTH
+		          ( TASK_NO,
+					DEPTH_GP,
+					DEPTH_NM,
+					CHARGER_ID,
+					PLAN_START_DATE,
+					PLAN_END_DATE,
+				   	<if test='PLAN_PROG_RATE != null and PLAN_PROG_RATE != ""'>
+					PLAN_PROG_RATE,
+					</if>
+				   	<if test='YY_GP != null and YY_GP != ""'>
+					YY_GP,
+					</if>
+					GATE_SET_YN_PMO,
+					GATE_SET_YN,
+				   	<if test='GATE_SET_ID_PMO != null and GATE_SET_ID_PMO != ""'>
+					GATE_SET_ID_PMO,
+					</if>
+				   	<if test='GATE_CHK_COMMENT_PMO != null and GATE_CHK_COMMENT_PMO != ""'>
+					GATE_CHK_COMMENT_PMO,
+					</if>
+				   	<if test='GATE_SET_ID != null and GATE_SET_ID != ""'>
+					GATE_SET_ID,
+					</if>
+				   	<if test='GATE_CHK_COMMENT != null and GATE_CHK_COMMENT != ""'>
+					GATE_CHK_COMMENT,
+					</if>
+					REG_ID,
+					REG_PGM,
+					REG_DDTT,
+					MOD_ID,
+					MOD_PGM,
+				    MOD_DDTT,
+				    DEPT_CD
+				  )
+			VALUES
+		          ( #{TASK_NO},
+					#{DEPTH_GP},
+					#{DEPTH_NM},
+					#{CHARGER_ID},
+					NVL(CASE WHEN #{PLAN_START_DATE} = '' THEN SYSDATE() END, #{PLAN_START_DATE}),
+					NVL(CASE WHEN #{PLAN_END_DATE} = '' THEN SYSDATE() END, #{PLAN_END_DATE}),
+				   	<if test='PLAN_PROG_RATE != null and PLAN_PROG_RATE != ""'>
+					#{PLAN_PROG_RATE},
+					</if>
+				   	<if test='YY_GP != null and YY_GP != ""'>
+					#{YY_GP},
+					</if>
+					#{GATE_SET_YN_PMO},
+					#{GATE_SET_YN},
+				   	<if test='GATE_SET_ID_PMO != null and GATE_SET_ID_PMO != ""'>
+					#{GATE_SET_ID_PMO},
+					</if>
+				   	<if test='GATE_CHK_COMMENT_PMO != null and GATE_CHK_COMMENT_PMO != ""'>
+					#{GATE_CHK_COMMENT_PMO},
+					</if>
+				   	<if test='GATE_SET_ID != null and GATE_SET_ID != ""'>
+					#{GATE_SET_ID},
+					</if>
+				   	<if test='GATE_CHK_COMMENT != null and GATE_CHK_COMMENT != ""'>
+					#{GATE_CHK_COMMENT},
+					</if>
+					#{REG_ID},
+					#{REG_PGM},
+					SYSDATE(),
+					#{MOD_ID},
+					#{MOD_PGM},
+					SYSDATE(),
+					#{DEPT_CD}
+				  )
+			ON DUPLICATE KEY
+				UPDATE  TASK_NO              = #{TASK_NO},
+						DEPTH_GP             = #{DEPTH_GP},
+						DEPTH_NM             = #{DEPTH_NM},
+						CHARGER_ID           = #{CHARGER_ID},
+						PLAN_START_DATE      = NVL(CASE WHEN #{PLAN_START_DATE} = '' THEN SYSDATE() END, #{PLAN_START_DATE}),
+						PLAN_END_DATE        = NVL(CASE WHEN #{PLAN_END_DATE} = '' THEN SYSDATE() END, #{PLAN_END_DATE}),
+				   		<if test='PLAN_PROG_RATE != null and PLAN_PROG_RATE != ""'>
+						PLAN_PROG_RATE       = #{PLAN_PROG_RATE},
+						</if>
+				   		<if test='YY_GP != null and YY_GP != ""'>
+						YY_GP                = #{YY_GP},
+						</if>
+						GATE_SET_YN_PMO      = #{GATE_SET_YN_PMO},
+						GATE_SET_YN          = #{GATE_SET_YN},
+				   		<if test='GATE_SET_ID_PMO != null and GATE_SET_ID_PMO != ""'>
+						GATE_SET_ID_PMO      = #{GATE_SET_ID_PMO},
+						</if>
+				   		<if test='GATE_CHK_COMMENT_PMO != null and GATE_CHK_COMMENT_PMO != ""'>
+						GATE_CHK_COMMENT_PMO = #{GATE_CHK_COMMENT_PMO},
+						</if>
+				   		<if test='GATE_SET_ID != null and GATE_SET_ID != ""'>
+						GATE_SET_ID          = #{GATE_SET_ID},
+						</if>
+				   		<if test='GATE_CHK_COMMENT != null and GATE_CHK_COMMENT != ""'>
+						GATE_CHK_COMMENT     = #{GATE_CHK_COMMENT},
+						</if>
+						MOD_ID               = #{MOD_ID},
+						MOD_PGM              = #{MOD_PGM},
+						MOD_DDTT             = SYSDATE(),
+						DEPT_CD              = #{DEPT_CD}
+    </insert>
+
+	<!--
+        Query Name  : hds.tech.rpms.project.service.dao.WbsMakeGenTaskDao.upsertTaskWbsItem
+        Description : 과제 WBS항목 저장
+            since          author              description
+        ===========    =============    ===========================
+        2023.07.07         1527431               최초 생성
+    -->
+
+	<insert id="upsertTaskWbsItem" parameterType="hashmap">
+        <![CDATA[
+		/* hds.tech.rpms.project.service.dao.WbsMakeGenTaskDao.upsertTaskWbsItem : 과제 WBS항목 저장  */
+		INSERT INTO TB_TASK_WBS_ITEM
+		          ( TASK_NO,
+					DEPTH_GP,
+					ITEM_CD,
+					ITEM_NM,
+					REG_ID,
+					REG_PGM,
+					REG_DDTT,
+					MOD_ID,
+					MOD_PGM,
+				    MOD_DDTT,
+				    ESSENTIAL_YN
+				  )
+			VALUES
+		          ( #{TASK_NO},
+					#{DEPTH_GP},
+					#{ITEM_CD},
+					#{ITEM_NM},
+					#{REG_ID},
+					#{REG_PGM},
+					SYSDATE(),
+					#{MOD_ID},
+					#{MOD_PGM},
+					SYSDATE(),
+					#{ESSENTIAL_YN}
+				  )
+			ON DUPLICATE KEY
+				UPDATE  TASK_NO      = #{TASK_NO},
+						DEPTH_GP     = #{DEPTH_GP},
+						ITEM_CD      = #{ITEM_CD},
+						ITEM_NM      = #{ITEM_NM},
+						MOD_ID       = #{MOD_ID},
+						MOD_PGM      = #{MOD_PGM},
+						MOD_DDTT     = SYSDATE(),
+						ESSENTIAL_YN = #{ESSENTIAL_YN}
+        ]]>
+    </insert>
+
+	<!--
+        Query Name  : hds.tech.rpms.project.service.dao.WbsMakeGenTaskDao.upsertTaskWbsItemNew
+        Description : 과제 WBS항목 저장(NEW)
+            since          author              description
+        ===========    =============    ===========================
+        2025.07.09         1531361               최초 생성
+    -->
+
+	<insert id="upsertTaskWbsItemNew" parameterType="hashmap">
+		/* hds.tech.rpms.project.service.dao.WbsMakeGenTaskDao.upsertTaskWbsItemNew : 과제 WBS항목 저장(NEW)  */
+		INSERT INTO TB_TASK_WBS_ITEM
+		          ( TASK_NO,
+					DEPTH_GP,
+					ITEM_CD,
+					ITEM_NM,
+					REG_ID,
+					REG_PGM,
+					REG_DDTT,
+					MOD_ID,
+					MOD_PGM,
+				    MOD_DDTT,
+				    <if test='PLAN_PROG_RATE != null and PLAN_PROG_RATE != ""'>
+				    PLAN_PROG_RATE,
+				    </if>
+				    <if test='PLAN_START_DATE != null and PLAN_START_DATE != ""'>
+				    PLAN_START_DATE,
+				    </if>
+				    <if test='PLAN_END_DATE != null and PLAN_END_DATE != ""'>
+				    PLAN_END_DATE,
+				    </if>
+				    ESSENTIAL_YN
+				  )
+			VALUES
+		          ( #{TASK_NO},
+					#{DEPTH_GP},
+					#{ITEM_CD},
+					#{ITEM_NM},
+					#{REG_ID},
+					#{REG_PGM},
+					SYSDATE(),
+					#{MOD_ID},
+					#{MOD_PGM},
+					SYSDATE(),
+					<if test='PLAN_PROG_RATE != null and PLAN_PROG_RATE != ""'>
+					#{PLAN_PROG_RATE},
+					</if>
+					<if test='PLAN_START_DATE != null and PLAN_START_DATE != ""'>
+					#{PLAN_START_DATE},
+					</if>
+					<if test='PLAN_END_DATE != null and PLAN_END_DATE != ""'>
+					#{PLAN_END_DATE},
+					</if>
+					#{ESSENTIAL_YN}
+				  )
+			ON DUPLICATE KEY
+				UPDATE  MOD_ID          = #{MOD_ID},
+						MOD_PGM         = #{MOD_PGM},
+						MOD_DDTT        = SYSDATE(),
+						<if test='PLAN_PROG_RATE != null and PLAN_PROG_RATE != ""'>
+						PLAN_PROG_RATE  = #{PLAN_PROG_RATE},
+						</if>
+						<if test='PLAN_START_DATE != null and PLAN_START_DATE != ""'>
+						PLAN_START_DATE = #{PLAN_START_DATE},
+						</if>
+						<if test='PLAN_END_DATE != null and PLAN_END_DATE != ""'>
+						PLAN_END_DATE   = #{PLAN_END_DATE},
+						</if>
+						ESSENTIAL_YN    = #{ESSENTIAL_YN}
+    </insert>
+
+	<!--
+        Query Name  : hds.tech.rpms.project.service.dao.WbsMakeGenTaskDao.insertTaskWbsAttNew
+        Description : 과제 WBS 참여인원 저장(NEW)
+            since          author              description
+        ===========    =============    ===========================
+        2025.07.09         1531361               최초 생성
+    -->
+
+	<insert id="insertTaskWbsAttNew" parameterType="hashmap">
+        <![CDATA[
+		/* hds.tech.rpms.project.service.dao.WbsMakeGenTaskDao.insertTaskWbsAttNew : 과제 WBS 참여인원 저장(NEW)  */
+		INSERT INTO TB_TASK_WBS_ATT_TNOP (
+		  TASK_NO,
+		  DEPTH_GP,
+		  ITEM_CD,
+		  ATT_USER_ID,
+		  ATT_DEPT_CD,
+		  REG_ID,
+		  REG_PGM,
+		  REG_DDTT,
+		  MOD_ID,
+		  MOD_PGM,
+		  MOD_DDTT
+		)
+		SELECT
+		  #{TASK_NO},
+		  #{DEPTH_GP},
+		  #{ITEM_CD},
+		  #{ATT_USER_ID},
+		  DEPT_CD,
+		  #{REG_ID},
+		  #{REG_PGM},
+		  SYSDATE(),
+		  #{MOD_ID},
+		  #{MOD_PGM},
+		  SYSDATE()
+		FROM TB_USER_INFO
+		WHERE USER_ID = #{ATT_USER_ID}
+        ]]>
+    </insert>
+
+	<!--
+        Query Name  : hds.tech.rpms.project.service.dao.WbsMakeGenTaskDao.deleteTaskWbsAttNew
+        Description : 과제 WBS 참여인원 삭제
+            since          author              description
+        ===========    =============    ===========================
+        2025.07.09         1527431               최초 생성
+    -->
+
+	<delete id="deleteTaskWbsAttNew" parameterType="hashmap">
+        <![CDATA[
+		/* hds.tech.rpms.project.service.dao.WbsMakeGenTaskDao.deleteTaskWbsAttNew : 과제 WBS 참여인원 삭제  */
+		DELETE FROM TB_TASK_WBS_ATT_TNOP
+		  WHERE TASK_NO  = #{TASK_NO}
+		    AND DEPTH_GP = #{DEPTH_GP}
+		    AND ITEM_CD = #{ITEM_CD}
+        ]]>
+    </delete>
+
+	<!--
+        Query Name  : hds.tech.rpms.project.service.dao.WbsMakeGenTaskDao.deleteTaskWbsDepth
+        Description : 과제 WBS 삭제
+            since          author              description
+        ===========    =============    ===========================
+        2023.07.07         1527431               최초 생성
+    -->
+
+	<delete id="deleteTaskWbsDepth" parameterType="hashmap">
+        <![CDATA[
+		/* hds.tech.rpms.project.service.dao.WbsMakeGenTaskDao.deleteTaskWbsDepth : 과제 WBS 단계 삭제  */
+		DELETE FROM TB_TASK_WBS_DEPTH
+		  WHERE TASK_NO  = #{TASK_NO}
+		    AND DEPTH_GP = #{DEPTH_GP}
+        ]]>
+    </delete>
+
+	<!--
+        Query Name  : hds.tech.rpms.project.service.dao.WbsMakeGenTaskDao.deleteTaskWbsDepthNew
+        Description : 과제 WBS 삭제(NEW)
+            since          author              description
+        ===========    =============    ===========================
+        2025.07.29         1531361               최초 생성
+    -->
+
+	<delete id="deleteTaskWbsDepthNew" parameterType="hashmap">
+        <![CDATA[
+		/* hds.tech.rpms.project.service.dao.WbsMakeGenTaskDao.deleteTaskWbsDepthNew : 과제 WBS 삭제(NEW)  */
+		DELETE FROM TB_TASK_WBS_DEPTH
+		  WHERE TASK_NO  = #{TASK_NO}
+        ]]>
+    </delete>
+
+	<!--
+        Query Name  : hds.tech.rpms.project.service.dao.WbsMakeGenTaskDao.insertTaskWbsDepthNew
+        Description : 과제 WBS 등록(NEW)
+            since          author              description
+        ===========    =============    ===========================
+        2025.07.29         1531361               최초 생성
+    -->
+
+	<insert id="insertTaskWbsDepthNew" parameterType="hashmap">
+		/* hds.tech.rpms.project.service.dao.WbsMakeGenTaskDao.insertTaskWbsDepthNew : 과제 WBS 등록(NEW)  */
+		INSERT INTO TB_TASK_WBS_DEPTH
+		     ( TASK_NO
+		     , DEPTH_GP
+		     , DEPTH_NM
+		     , CHARGER_ID
+		     , DEPT_CD
+			<if test='PLAN_START_DATE != null and PLAN_START_DATE != ""'>
+		     , PLAN_START_DATE
+		    </if> 
+			<if test='PLAN_END_DATE != null and PLAN_END_DATE != ""'>
+		     , PLAN_END_DATE
+		    </if> 
+			<if test='PLAN_PROG_RATE != null and PLAN_PROG_RATE != ""'>
+		     , PLAN_PROG_RATE
+		    </if> 
+		     , YY_GP
+		     , GATE_SET_YN_PMO
+		     , GATE_SET_ID_PMO
+		     , GATE_CHK_COMMENT_PMO
+		     , GATE_SET_YN
+		     , GATE_SET_ID
+		     , GATE_CHK_COMMENT
+		     , REG_ID
+		     , REG_PGM
+		     , REG_DDTT
+		     , MOD_ID
+		     , MOD_PGM
+		     , MOD_DDTT )
+		VALUES
+		     ( #{TASK_NO}
+		     , #{DEPTH_GP}
+		     , #{DEPTH_NM}
+		     , #{CHARGER_ID}
+		     , #{DEPT_CD}
+			<if test='PLAN_START_DATE != null and PLAN_START_DATE != ""'>
+		     , #{PLAN_START_DATE}
+		    </if> 
+			<if test='PLAN_END_DATE != null and PLAN_END_DATE != ""'>
+		     , #{PLAN_END_DATE}
+		    </if> 
+			<if test='PLAN_PROG_RATE != null and PLAN_PROG_RATE != ""'>
+		     , #{PLAN_PROG_RATE}
+		    </if> 
+		     , #{YY_GP}
+		     , #{GATE_SET_YN_PMO}
+		     , #{GATE_SET_ID_PMO}
+		     , #{GATE_CHK_COMMENT_PMO}
+		     , #{GATE_SET_YN}
+		     , #{GATE_SET_ID}
+		     , #{GATE_CHK_COMMENT}
+			 , #{REG_ID}
+			 , #{REG_PGM}
+			 , SYSDATE()
+			 , #{MOD_ID}
+			 , #{MOD_PGM}
+			 , SYSDATE() )
+    </insert>
+
+	<!--
+        Query Name  : hds.tech.rpms.project.service.dao.WbsMakeGenTaskDao.deleteTaskWbsItem
+        Description : 과제 WBS항목 삭제
+            since          author              description
+        ===========    =============    ===========================
+        2023.07.07         1527431               최초 생성
+    -->
+
+	<delete id="deleteTaskWbsItem" parameterType="hashmap">
+        <![CDATA[
+		/* hds.tech.rpms.project.service.dao.WbsMakeGenTaskDao.deleteTaskWbsItem : 과제 WBS항목 삭제  */
+		DELETE FROM TB_TASK_WBS_ITEM
+		  WHERE TASK_NO  = #{TASK_NO}
+		    AND DEPTH_GP = #{DEPTH_GP}
+        ]]>
+    </delete>
+
+	<!--
+        Query Name  : hds.tech.rpms.project.service.dao.WbsMakeGenTaskDao.deleteTaskWbsItemNew
+        Description : 과제 WBS항목 삭제(NEW)
+            since          author              description
+        ===========    =============    ===========================
+        2025.07.09         1531361               최초 생성
+    -->
+
+	<delete id="deleteTaskWbsItemNew" parameterType="hashmap">
+        <![CDATA[
+		/* hds.tech.rpms.project.service.dao.WbsMakeGenTaskDao.deleteTaskWbsItemNew : 과제 WBS항목 삭제(NEW)  */
+		DELETE FROM TB_TASK_WBS_ITEM
+		  WHERE TASK_NO  = #{TASK_NO}
+		    AND DEPTH_GP = #{DEPTH_GP}
+		    AND ITEM_CD = #{ITEM_CD}
+        ]]>
+    </delete>
+
+	<!--
+        Query Name  : hds.tech.rpms.project.service.dao.WbsMakeGenTaskDao.selectTaskWbsDepthExists
+        Description : 과제 WBS 단계 조회
+            since          author              description
+        ===========    =============    ===========================
+        2023.07.07         1527431               최초 생성
+    -->
+
+	<select id="selectTaskWbsDepthExists" parameterType="hashmap" resultType="hashmap">
+        <![CDATA[
+		/* hds.tech.rpms.project.service.dao.WbsMakeGenTaskDao.selectTaskWbsDepthExists : 과제 WBS 단계 조회  */
+		SELECT  COUNT(*) COUNT,
+				NVL(DECODE_ORACLE(SUBSTR(MAX(H.DEPTH_GP), INSTR(MAX(H.DEPTH_GP),'_')+1)
+				                , #{CODE_DEPTH_GP}, CONCAT(#{CODE_DEPTH_GP}, '_', 1)
+                                                  , CONCAT(#{CODE_DEPTH_GP}, '_', SUBSTR(MAX(H.DEPTH_GP), INSTR(MAX(H.DEPTH_GP),'_')+1)+1))
+                                                  ,#{CODE_DEPTH_GP}) DEPTH_GP
+		  FROM  TB_TASK_WBS_DEPTH  H
+		  WHERE H.TASK_NO = #{TASK_NO}
+		    AND H.DEPTH_GP LIKE CONCAT(#{CODE_DEPTH_GP},'%')
+        ]]>
+    </select>
+   	<select id="selectTaskWbsDepthNatlExists" parameterType="hashmap" resultType="hashmap">
+       <![CDATA[
+		SELECT  H.TASK_NO,
+		        H.DEPTH_GP,
+		        H.DEPTH_NM,
+		        H.CHARGER_ID,
+		        H.PLAN_START_DATE,
+		        H.PLAN_END_DATE,
+		        H.PLAN_PROG_RATE,
+		        H.YY_GP,
+		        H.GATE_SET_YN_PMO,
+		        H.GATE_SET_YN,
+		        H.GATE_SET_ID_PMO,
+		        H.GATE_CHK_COMMENT_PMO,
+		        H.GATE_SET_ID,
+		        H.GATE_CHK_COMMENT,
+		        H.DEPT_CD
+		  FROM  TB_TASK_WBS_DEPTH  H
+		  WHERE H.TASK_NO = #{TASK_NO}
+		    AND H.DEPTH_GP = #{DEPTH_GP}
+        ]]>
+    </select>
+    
+
+	<select id="selectMaxTaskWbsDepth" parameterType="hashmap" resultType="hashmap">
+        <![CDATA[
+		/* hds.tech.rpms.project.service.dao.WbsMakeGenTaskDao.selectMaxTaskWbsDepth : 과제 WBS 단계 max조회  */
+		SELECT  COUNT(*) COUNT,
+            	MAX(H.DEPTH_GP) DEPTH_GP
+		  FROM  TB_TASK_WBS_DEPTH  H
+		  WHERE H.TASK_NO = #{TASK_NO}
+		    AND H.DEPTH_GP LIKE CONCAT(#{CODE_DEPTH_GP},'%')
+        ]]>
+    </select>
+
+	<!--
+        Query Name  : hds.tech.rpms.project.service.dao.WbsMakeGenTaskDao.selectTaskWbsDepth
+        Description : 과제 WBS 단계조회
+            since          author              description
+        ===========    =============    ===========================
+        2023.07.07         1527431               최초 생성
+    -->
+
+	<select id="selectTaskWbsDepth" parameterType="hashmap" resultType="hashmap">
+        <![CDATA[
+		/* hds.tech.rpms.project.service.dao.WbsMakeGenTaskDao.selectTaskWbsDepth : 과제 WBS 단계조회  */
+WITH CTE AS (
+    SELECT  H.TASK_NO,
+            LEFT(H.DEPTH_GP,3) CODE_DEPTH_GP,
+            H.DEPTH_GP,
+            H.DEPTH_NM,
+            H.CHARGER_ID,
+            M.USER_NM,
+            H.DEPT_CD,
+            H.PLAN_START_DATE,
+            H.PLAN_END_DATE,
+            H.PLAN_PROG_RATE,
+            H.YY_GP,
+            NVL(NULLIF(L.TASK_TYPE_GQ,''), L.TASK_TYPE) TASK_TYPE,
+            H.GATE_SET_YN_PMO,
+            H.GATE_SET_YN,
+            H.GATE_SET_ID_PMO,
+            H.GATE_CHK_COMMENT_PMO,
+            H.GATE_SET_ID,
+            H.GATE_CHK_COMMENT
+      FROM  TB_TASK_WBS_DEPTH  H
+      INNER JOIN TB_TASK_BASE_INFO  L
+        ON  H.TASK_NO  = L.TASK_NO
+      LEFT JOIN TB_USER_INFO  M
+        ON  H.CHARGER_ID = M.USER_ID 
+      WHERE H.TASK_NO = #{TASK_NO}
+)
+SELECT  H.*
+  FROM  CTE  H
+  ORDER BY H.TASK_NO, DECODE_ORACLE(H.TASK_TYPE,'Q',H.TASK_TYPE,LEFT(H.DEPTH_GP,3)), H.PLAN_START_DATE
+        ]]>
+    </select>
+
+	<!--
+        Query Name  : hds.tech.rpms.project.service.dao.WbsMakeGenTaskDao.selectMaxDepthGp
+        Description : 과제 단계구분 최대값 생성(퀵과제)
+            since          author              description
+        ===========    =============    ===========================
+        2023.07.07         1527431               최초 생성
+    -->
+	<select id="selectMaxDepthGp" parameterType="hashmap" resultType="hashmap">
+        <![CDATA[
+		/* hds.tech.rpms.project.service.dao.WbsMakeGenTaskDao.selectMaxDepthGp : 과제 단계구분 최대값 생성(퀵과제)  */
+		SELECT  NVL(MAX(CAST(H.DEPTH_GP AS INT)),0) + 1 AS DEPTH_GP
+		  FROM  TB_TASK_WBS_DEPTH  H
+		  WHERE H.TASK_NO = #{TASK_NO}
+        ]]>
+    </select>
+
+	<!--
+        Query Name  : hds.tech.rpms.project.service.dao.WbsMakeGenTaskDao.selectTaskBaseInfoHeader
+        Description : 과제Gate설정용과제정보(PMO,TL공통)
+            since          author              description
+        ===========    =============    ===========================
+        2023.07.07         1527431               최초 생성
+    -->
+	<select id="selectGatePMO" parameterType="hashmap" resultType="hashmap">
+        <![CDATA[
+		/* hds.tech.rpms.project.service.dao.WbsMakeGenTaskDao.selectGatePMO : 과제Gate설정PMO  */
+WITH CTE AS (
+    SELECT  H.TASK_NO
+          , H.TASK_NM
+          , H.SUPER_DEPT_CD
+          , D.DEPT_NM
+          , H.TASK_PL_EMPNO
+          , CONCAT(M.USER_NM, ' ', M.JOBGRADE_NM) USER_NM
+          , H.TASK_START_DATE
+          , H.TASK_END_DATE
+          , NVL(CASE WHEN NULLIF(H.TASK_TYPE_GQ,'') IS NOT NULL THEN CONCAT(D1.COMM_NM,'(',D2.REMARK1,')') END, D1.COMM_NM) TASK_TYPE_NM
+          , TRIM(CONCAT_WS(' ', DECODE_ORACLE(H.LINK_STRT_PTRM   ,'Y','PTRM','')
+                              , DECODE_ORACLE(H.LINK_STRT_BIZPLAN,'Y','업무계획','')
+                              , DECODE_ORACLE(H.LINK_STRT_INNOSUP,'Y','혁신지원','')
+                              , DECODE_ORACLE(H.LINK_STRT_G_D_C  ,'Y','제품개발위원회',''))) LINK_STRT_NM
+          , H.TASK_TYPE
+          , H.TASK_TYPE_GQ
+          , D1.SEQ
+          , H.TASK_DEPTH
+          , H.TASK_DEPTH_STAT
+          , W.PROG_STAT
+          , W.WBS_REG_DATE
+      FROM  TB_TASK_BASE_INFO  H
+      INNER JOIN  TB_TASK_WBS  W
+        ON  H.TASK_NO  = W.TASK_NO
+      LEFT  JOIN TB_USER_INFO  M
+        ON  H.TASK_PL_EMPNO = M.USER_ID
+      LEFT  JOIN TB_DEPT_INFO  D
+        ON  H.SUPER_DEPT_CD = D.DEPT_CD
+      LEFT  JOIN TB_COMM_CD  D1
+        ON  H.TASK_TYPE = D1.COMM_CD
+       AND  'TASK_TYPE' = D1.COMM_GP
+      LEFT  JOIN TB_COMM_CD  D2
+        ON  H.TASK_TYPE_GQ = D2.COMM_CD
+       AND  'TASK_TYPE_GQ' = D2.COMM_GP
+      WHERE H.PROG_STAT != 'C'
+),
+CTE2 AS (
+    SELECT  H.*
+      FROM (SELECT  H.TASK_NO
+                  , H.BIZ_GP
+                  , H.APPROVAL_GP
+                  , H.APPROVAL_COMMENT
+                  , H.APPROVAL_STEP_NO
+                  , H.APPROVAL_STAT
+                  , ROW_NUMBER() OVER (PARTITION BY H.TASK_NO, H.BIZ_GP, H.APPROVAL_GP ORDER BY H.APPROVAL_STEP_NO DESC) RN
+              FROM  TB_TASK_APPROVAL  H
+              WHERE H.BIZ_GP = 'A4'
+                AND H.APPROVAL_GP = 'PMO'
+                AND EXISTS (SELECT  'X'
+                              FROM  CTE  S
+                              WHERE S.TASK_NO = H.TASK_NO)
+           ) H
+      WHERE H.RN = 1
+)
+SELECT  H.*
+  FROM (SELECT  CEIL(H.RN / #{viewRows}) VIEW_PAGE
+              , H.*
+          FROM (SELECT  ROW_NUMBER () OVER (ORDER BY APPROVAL_STAT, H.WBS_REG_DATE DESC, H.SEQ, H.TASK_TYPE_GQ, H.TASK_NO DESC, H.TASK_DEPTH, H.TASK_DEPTH_STAT) RN
+                      , H.*
+                  FROM (SELECT  COUNT(*) OVER () TOTAL,
+                                H.*,
+                                CASE WHEN H.TASK_DEPTH = '4' AND H.PROG_STAT = 'B' THEN 'B'
+                                ELSE COALESCE (NULLIF(M.APPROVAL_STAT,''), 'X')
+                                END APPROVAL_STAT,
+                                M.APPROVAL_COMMENT
+                          FROM  CTE  H
+                          LEFT  JOIN CTE2  M
+                            ON  H.TASK_NO = M.TASK_NO
+                          WHERE (H.TASK_DEPTH = '4' AND H.PROG_STAT = 'B')
+                             OR NVL(NULLIF(M.APPROVAL_STAT,''),'A') IN ('B','C','E')
+                       ) H
+               ) H
+       ) H
+  WHERE H.VIEW_PAGE = #{viewPage}
+        ]]>
+    </select>
+
+	<select id="selectGateTL" parameterType="hashmap" resultType="hashmap">
+        <![CDATA[
+		/* hds.tech.rpms.project.service.dao.WbsMakeGenTaskDao.selectGateTL : 과제Gate설정팀장  */
+WITH CTE_USER_DEPT AS (
+    SELECT  H.MGR_ID
+          , H.USER_ID
+          , NVL(H.AUTH_YN,'N') AUTH_YN
+          , H.DEPT_CD
+      FROM (SELECT  H.USER_ID
+                  , H.DEPT_CD
+                  , M.MGR_ID
+                  , M.DEPT_NM
+                  ,( SELECT  'Y'
+                      WHERE EXISTS (SELECT 'Y'
+                                      FROM  TB_ACL_GRPID_USER  S
+                                      WHERE S.DEPT_USER_ID IN (H.USER_ID, H.DEPT_CD)
+                                        AND S.ACL_GRP_ID   IN (SELECT  S2.COMM_CD
+                                                                 FROM  TB_COMM_CD  S2
+                                                                 WHERE S2.COMM_GP = 'ACL_GRP_ID'
+                                                                   AND S2.USE_YN  = 'Y') ) ) AUTH_YN
+              FROM  TB_USER_INFO  H,
+                    TB_DEPT_INFO  M
+              WHERE H.USER_ID = #{USER_ID}
+                AND H.DEPT_CD = M.DEPT_CD
+           ) H
+),
+CTE AS (
+    SELECT  H.TASK_NO
+          , H.TASK_NM
+          , H.SUPER_DEPT_CD
+          , D.DEPT_NM
+          , H.TASK_PL_EMPNO
+          , CONCAT(M.USER_NM, ' ', M.JOBGRADE_NM) USER_NM
+          , H.TASK_START_DATE
+          , H.TASK_END_DATE
+          , NVL(CASE WHEN NULLIF(H.TASK_TYPE_GQ,'') IS NOT NULL THEN CONCAT(D1.COMM_NM,'(',D2.REMARK1,')') END, D1.COMM_NM) TASK_TYPE_NM
+          , TRIM(CONCAT_WS(' ', DECODE_ORACLE(H.LINK_STRT_PTRM   ,'Y','PTRM','')
+                              , DECODE_ORACLE(H.LINK_STRT_BIZPLAN,'Y','업무계획','')
+                              , DECODE_ORACLE(H.LINK_STRT_INNOSUP,'Y','혁신지원','')
+                              , DECODE_ORACLE(H.LINK_STRT_G_D_C  ,'Y','제품개발위원회',''))) LINK_STRT_NM
+          , H.TASK_TYPE
+          , H.TASK_TYPE_GQ
+          , D1.SEQ
+          , H.TASK_DEPTH
+          , H.TASK_DEPTH_STAT
+          , W.PROG_STAT
+          , W.WBS_REG_DATE
+      FROM  TB_TASK_BASE_INFO  H
+      INNER JOIN  TB_TASK_WBS  W
+        ON  H.TASK_NO  = W.TASK_NO
+      LEFT  JOIN TB_USER_INFO  M
+        ON  H.TASK_PL_EMPNO = M.USER_ID
+      LEFT  JOIN TB_DEPT_INFO  D
+        ON  D.DEPT_CD = H.SUPER_DEPT_CD
+      LEFT  JOIN TB_COMM_CD  D1
+        ON  H.TASK_TYPE = D1.COMM_CD
+       AND  'TASK_TYPE' = D1.COMM_GP
+      LEFT  JOIN TB_COMM_CD  D2
+        ON  H.TASK_TYPE_GQ = D2.COMM_CD
+       AND  'TASK_TYPE_GQ' = D2.COMM_GP
+      CROSS JOIN CTE_USER_DEPT  L
+      WHERE H.PROG_STAT != 'C'
+        AND (L.AUTH_YN   = 'Y'
+          OR L.DEPT_CD   = H.SUPER_DEPT_CD)
+),
+CTE2 AS (
+    SELECT  H.*
+      FROM (SELECT  H.TASK_NO
+                  , H.BIZ_GP
+                  , H.APPROVAL_GP
+                  , H.APPROVAL_COMMENT
+                  , H.APPROVAL_STEP_NO
+                  , H.APPROVAL_STAT
+                  , ROW_NUMBER() OVER (PARTITION BY H.TASK_NO, H.BIZ_GP, H.APPROVAL_GP ORDER BY H.APPROVAL_STEP_NO DESC) RN
+              FROM  TB_TASK_APPROVAL  H
+              WHERE H.BIZ_GP = 'A4'
+                AND H.APPROVAL_GP = 'PMO'
+                AND EXISTS (SELECT  'X'
+                              FROM  CTE  S
+                              WHERE S.TASK_NO = H.TASK_NO)
+           ) H
+      WHERE H.RN = 1
+),
+CTE3 AS (
+    SELECT  H.*
+      FROM (SELECT  H.TASK_NO
+                  , H.BIZ_GP
+                  , H.APPROVAL_GP
+                  , H.APPROVAL_COMMENT
+                  , H.APPROVAL_STEP_NO
+                  , H.APPROVAL_STAT
+                  , ROW_NUMBER() OVER (PARTITION BY H.TASK_NO, H.BIZ_GP, H.APPROVAL_GP ORDER BY H.APPROVAL_STEP_NO DESC) RN
+              FROM  TB_TASK_APPROVAL  H
+              WHERE H.BIZ_GP = 'A4'
+                AND H.APPROVAL_GP = 'TL'
+                AND EXISTS (SELECT  'X'
+                              FROM  CTE  S
+                              WHERE S.TASK_NO = H.TASK_NO)
+           ) H
+      WHERE H.RN = 1
+)
+SELECT  H.*
+  FROM (SELECT  CEIL(H.RN / #{viewRows}) VIEW_PAGE
+              , H.*
+          FROM (SELECT  ROW_NUMBER () OVER (ORDER BY H.APPROVAL_STAT, H.WBS_REG_DATE DESC, H.SEQ, H.TASK_TYPE_GQ, H.TASK_NO DESC, H.TASK_DEPTH, H.TASK_DEPTH_STAT) RN
+                      , H.*
+                  FROM (SELECT  COUNT(*) OVER() TOTAL
+                              , COALESCE (CASE WHEN H.TASK_DEPTH = '4' AND H.PROG_STAT = 'B1' THEN 'B' END,
+                                          NULLIF(D.APPROVAL_STAT,''),
+                                          'B') APPROVAL_STAT
+                              , D.APPROVAL_COMMENT
+                              , H.*
+                          FROM  CTE  H
+                          INNER JOIN CTE2  M
+                            ON  H.TASK_NO = M.TASK_NO
+                          LEFT  JOIN CTE3  D
+                            ON  H.TASK_NO = D.TASK_NO
+                          WHERE ( (H.TASK_DEPTH = '4' AND H.PROG_STAT = 'B1')
+                              OR NVL(NULLIF(D.APPROVAL_STAT,''),'A') IN ('B','C','E') )
+                       ) H
+               ) H
+       ) H
+  WHERE H.VIEW_PAGE = #{viewPage}
+        ]]>
+    </select>
+
+	<select id="selectTaskBaseInfoHeader" parameterType="hashmap" resultType="hashmap">
+        <![CDATA[
+		/* hds.tech.rpms.project.service.dao.WbsMakeGenTaskDao.selectTaskBaseInfoHeader : 과제Gate설정용과제정보(PMO,TL공통)  */
+		WITH CTE AS (
+			SELECT  H.TASK_NO
+			      , H.TASK_NM
+			      , H.SUPER_DEPT_CD
+			      , M.DEPT_NM
+			      , H.TASK_PL_EMPNO
+			      , CONCAT(M.USER_NM, ' ', M.JOBGRADE_NM) USER_NM
+			      , H.TASK_START_DATE
+			      , H.TASK_END_DATE
+			      , NVL(CASE WHEN NULLIF(H.TASK_TYPE_GQ,'') IS NOT NULL THEN CONCAT(D1.COMM_NM,'(',D2.REMARK1,')') END, D1.COMM_NM) TASK_TYPE_NM
+			      , TRIM(CONCAT_WS(' ', DECODE_ORACLE(H.LINK_STRT_PTRM   ,'Y','PTRM','')
+			                          , DECODE_ORACLE(H.LINK_STRT_BIZPLAN,'Y','업무계획','')
+			                          , DECODE_ORACLE(H.LINK_STRT_INNOSUP,'Y','혁신지원','')
+			                          , DECODE_ORACLE(H.LINK_STRT_G_D_C  ,'Y','제품개발위원회',''))) LINK_STRT_NM
+			      , H.TASK_TYPE
+			      , H.TASK_TYPE_GQ
+			      , W.PROG_STAT
+			  FROM  TB_TASK_BASE_INFO  H
+			  INNER JOIN  TB_TASK_WBS  W
+			    ON  H.TASK_NO  = W.TASK_NO
+			  LEFT  JOIN TB_USER_INFO  M
+			    ON  H.TASK_PL_EMPNO = M.USER_ID
+			   AND  H.SUPER_DEPT_CD = M.DEPT_CD
+			  LEFT  JOIN TB_COMM_CD  D1
+			    ON  H.TASK_TYPE = D1.COMM_CD
+			   AND  'TASK_TYPE' = D1.COMM_GP
+			  LEFT  JOIN TB_COMM_CD  D2
+			    ON  H.TASK_TYPE_GQ = D2.COMM_CD
+			   AND  'TASK_TYPE_GQ' = D2.COMM_GP
+			  WHERE 1=1
+	      	AND H.TASK_DEPTH >= '4'
+	      	AND W.PROG_STAT  >= #{PROG_STAT}
+		),
+		CTE2 AS (
+		    SELECT  H.TASK_NO
+		          , MAX(DECODE_ORACLE(H.APPROVAL_GP,'PMO', H.APPROVAL_COMMENT)) PMO_COMMENT
+		          , MAX(DECODE_ORACLE(H.APPROVAL_GP,'TL' , H.APPROVAL_COMMENT)) TL_COMMENT
+		      FROM (SELECT  H.TASK_NO
+		                  , H.APPROVAL_GP
+		                  , H.APPROVAL_COMMENT
+		                  , H.APPROVAL_STEP_NO
+		                  , ROW_NUMBER() OVER (PARTITION BY H.TASK_NO, H.BIZ_GP, H.APPROVAL_GP ORDER BY H.APPROVAL_STEP_NO DESC) RN
+		              FROM  TB_TASK_APPROVAL  H
+		           ) H
+		      WHERE H.RN = 1
+		        AND EXISTS (SELECT  'X'
+		                      FROM  CTE  S
+		                      WHERE H.TASK_NO = S.TASK_NO)
+		      GROUP BY H.TASK_NO
+		)
+		SELECT  H.TASK_NO
+		      , H.TASK_NM
+		      , H.SUPER_DEPT_CD
+		      , H.DEPT_NM
+		      , H.TASK_PL_EMPNO
+		      , H.USER_NM
+		      , H.TASK_START_DATE
+		      , H.TASK_END_DATE
+		      , H.TASK_TYPE_NM
+		      , H.LINK_STRT_NM
+		      , H.TASK_TYPE
+		      , H.TASK_TYPE_GQ
+		      , H.PROG_STAT
+		      , M.PMO_COMMENT
+		      , M.TL_COMMENT
+		  FROM  CTE   H,
+		        CTE2  M
+		  WHERE H.TASK_NO = M.TASK_NO
+        ]]>
+    </select>
+
+    <!--
+        Query Name  : hds.tech.rpms.project.service.dao.WbsMakeGenTaskDao.updateTaskWbsDepthGate
+        Description : UPDATE 과제 WBS
+            since          author              description
+        ===========    =============    ===========================
+        2023.07.07         1527431               최초 생성
+    -->
+	<update id="updateTaskWbsDepthGate" parameterType="hashmap">
+		/* hds.tech.rpms.project.service.dao.WbsMakeGenTaskDao.updateTaskWbsDepthGate : 과제Gate설정저장(PMO,TL공통)  */
+		UPDATE  TB_TASK_WBS_DEPTH
+		  SET   
+		      <if test='GATE_SET_YN_PMO != null'>
+		  		GATE_SET_YN_PMO      = #{GATE_SET_YN_PMO}
+		      , GATE_SET_ID_PMO      = #{GATE_SET_ID_PMO}
+		      , GATE_CHK_COMMENT_PMO = #{GATE_CHK_COMMENT_PMO}
+		      </if>
+		      <if test='GATE_SET_YN != null'>	
+		  	    GATE_SET_YN      = #{GATE_SET_YN}
+		      , GATE_SET_ID      = #{GATE_SET_ID}
+		      , GATE_CHK_COMMENT = #{GATE_CHK_COMMENT}
+		      </if>
+		      , MOD_ID              = #{MOD_ID}
+		      , MOD_PGM             = #{MOD_PGM}
+		      , MOD_DDTT            = SYSDATE()
+		  WHERE TASK_NO  = #{TASK_NO}
+		    AND DEPTH_GP = #{DEPTH_GP}
+	</update>    
+
+	<!--
+        Query Name  : hds.tech.rpms.project.service.dao.WbsMakeGenTaskDao.selectTaskWbsNatl
+        Description : 과제 WBS 단계(국책과제) 조회
+            since          author              description
+        ===========    =============    ===========================
+        2023.07.07         1527431               최초 생성
+    -->
+	<select id="selectTaskWbsNatl" parameterType="hashmap" resultType="hashmap">
+        <![CDATA[
+		/* hds.tech.rpms.project.service.dao.WbsMakeGenTaskDao.selectTaskWbsNatl : 과제 WBS 단계(국책과제) 조회  */
+		SELECT  H.TASK_NO
+		      , H.YY_GP
+		      , MAX(DECODE_ORACLE(RIGHT(H.DEPTH_GP,3), 'N10', RIGHT(H.DEPTH_GP,3))) YY_GP_STEP1
+		      , MAX(DECODE_ORACLE(RIGHT(H.DEPTH_GP,3), 'N10', H.DEPTH_NM)) DEPTH_NM1
+		      , MAX(DECODE_ORACLE(RIGHT(H.DEPTH_GP,3), 'N10', H.CHARGER_ID)) CHARGER_ID1
+		      , MAX(DECODE_ORACLE(RIGHT(H.DEPTH_GP,3), 'N10', M.USER_NM)) USER_NM1
+		      , MAX(DECODE_ORACLE(RIGHT(H.DEPTH_GP,3), 'N10', H.PLAN_START_DATE)) PLAN_START_DATE1
+		      , MAX(DECODE_ORACLE(RIGHT(H.DEPTH_GP,3), 'N10', H.PLAN_END_DATE)) PLAN_END_DATE1
+		      , MAX(DECODE_ORACLE(RIGHT(H.DEPTH_GP,3), 'N10', H.DEPT_CD)) DEPT_CD1
+		      , MAX(DECODE_ORACLE(RIGHT(H.DEPTH_GP,3), 'N20', RIGHT(H.DEPTH_GP,3))) YY_GP_STEP2
+		      , MAX(DECODE_ORACLE(RIGHT(H.DEPTH_GP,3), 'N20', H.DEPTH_NM)) DEPTH_NM2
+		      , MAX(DECODE_ORACLE(RIGHT(H.DEPTH_GP,3), 'N20', H.CHARGER_ID)) CHARGER_ID2
+		      , MAX(DECODE_ORACLE(RIGHT(H.DEPTH_GP,3), 'N20', M.USER_NM)) USER_NM2
+		      , MAX(DECODE_ORACLE(RIGHT(H.DEPTH_GP,3), 'N20', H.PLAN_START_DATE)) PLAN_START_DATE2
+		      , MAX(DECODE_ORACLE(RIGHT(H.DEPTH_GP,3), 'N20', H.PLAN_END_DATE)) PLAN_END_DATE2
+		      , MAX(DECODE_ORACLE(RIGHT(H.DEPTH_GP,3), 'N20', H.DEPT_CD)) DEPT_CD2
+		      , MAX(DECODE_ORACLE(RIGHT(H.DEPTH_GP,3), 'N30', RIGHT(H.DEPTH_GP,3))) YY_GP_STEP3
+		      , MAX(DECODE_ORACLE(RIGHT(H.DEPTH_GP,3), 'N30', H.DEPTH_NM)) DEPTH_NM3
+		      , MAX(DECODE_ORACLE(RIGHT(H.DEPTH_GP,3), 'N30', H.CHARGER_ID)) CHARGER_ID3
+		      , MAX(DECODE_ORACLE(RIGHT(H.DEPTH_GP,3), 'N30', M.USER_NM)) USER_NM3
+		      , MAX(DECODE_ORACLE(RIGHT(H.DEPTH_GP,3), 'N30', H.PLAN_START_DATE)) PLAN_START_DATE3
+		      , MAX(DECODE_ORACLE(RIGHT(H.DEPTH_GP,3), 'N30', H.PLAN_END_DATE)) PLAN_END_DATE3
+		      , MAX(DECODE_ORACLE(RIGHT(H.DEPTH_GP,3), 'N30', H.DEPT_CD)) DEPT_CD3
+		      , MAX(DECODE_ORACLE(RIGHT(H.DEPTH_GP,3), 'N50', RIGHT(H.DEPTH_GP,3))) YY_GP_STEP4
+		      , MAX(DECODE_ORACLE(RIGHT(H.DEPTH_GP,3), 'N50', H.DEPTH_NM)) DEPTH_NM4
+		      , MAX(DECODE_ORACLE(RIGHT(H.DEPTH_GP,3), 'N50', H.CHARGER_ID)) CHARGER_ID4
+		      , MAX(DECODE_ORACLE(RIGHT(H.DEPTH_GP,3), 'N50', M.USER_NM)) USER_NM4
+		      , MAX(DECODE_ORACLE(RIGHT(H.DEPTH_GP,3), 'N50', H.PLAN_START_DATE)) PLAN_START_DATE4
+		      , MAX(DECODE_ORACLE(RIGHT(H.DEPTH_GP,3), 'N50', H.PLAN_END_DATE)) PLAN_END_DATE4
+		      , MAX(DECODE_ORACLE(RIGHT(H.DEPTH_GP,3), 'N50', H.DEPT_CD)) DEPT_CD4
+		  FROM  TB_TASK_WBS_DEPTH  H
+		  LEFT  JOIN TB_USER_INFO  M
+		    ON  H.CHARGER_ID = M.USER_ID
+		  WHERE H.TASK_NO = #{TASK_NO}
+		  GROUP BY H.TASK_NO, H.YY_GP
+		  ORDER BY H.YY_GP, H.PLAN_START_DATE
+        ]]>
+    </select>
+
+	<!--
+        Query Name  : hds.tech.rpms.project.service.dao.WbsMakeGenTaskDao.selectTaskClassItem
+        Description : 단계별분류항목조회
+            since          author              description
+        ===========    =============    ===========================
+        2023.07.07         1527431               최초 생성
+    -->
+
+	<select id="selectTaskClassItem" parameterType="hashmap" resultType="hashmap">
+        <![CDATA[
+		/* hds.tech.rpms.project.service.dao.WbsMakeGenTaskDao.selectTaskClassItem : 단계별분류항목조회  */
+		WITH CTE AS (
+		    SELECT  H.TASK_CLASS, H.TECH_CLASS1, H.TECH_CLASS2, H.TECH_CLASS3, H.TASK_TYPE_GQ
+		      FROM  TB_TASK_BASE_INFO  H
+		      WHERE H.TASK_NO = #{TASK_NO}
+		)
+		SELECT  D.COMM_GP,
+		        D2.COMM_GP_NM,
+		        M.ITEM_CD     AS CD_VAL,
+	            NVL(DECODE_ORACLE(M.ESSENTIAL_YN,'Y',CONCAT('[필수]',D.COMM_NM)),D.COMM_NM) CD_MNNG,
+	            CONCAT(M.ITEM_CD, ' : ', NVL(DECODE_ORACLE(M.ESSENTIAL_YN,'Y',CONCAT('[필수]',D.COMM_NM)),D.COMM_NM)) AS CD_VAL_MNNG,
+			    M.DEPTH_GP AS UPPER_CD
+		  FROM  CTE  H
+		  LEFT  JOIN TB_TASK_CLASS_ITEM  M
+		     ON H.TASK_CLASS   = M.TASK_CLASS
+		    AND H.TECH_CLASS1  = M.TECH_CLASS1
+		    AND H.TECH_CLASS2  = M.TECH_CLASS2
+		    AND H.TECH_CLASS3  = M.TECH_CLASS3
+		    AND H.TASK_TYPE_GQ = M.TASK_TYPE
+		  LEFT  JOIN TB_COMM_CD  D
+		     ON M.ITEM_CD = D.COMM_CD
+		    AND 'Y' = D.USE_YN
+		  LEFT  JOIN TB_COMM_CD_GP  D2
+		     ON D.COMM_GP = D2.COMM_GP
+		    AND 'Y' = D2.USE_YN
+		  ORDER BY M.DEPTH_GP, M.ESSENTIAL_YN DESC, M.ITEM_CD
+        ]]>
+    </select>
+
+	<!--
+        Query Name  : hds.tech.rpms.project.service.dao.WbsMakeGenTaskDao.selectTaskWbsItemEssentialYn
+        Description : 단계별분류항목필수여부
+            since          author              description
+        ===========    =============    ===========================
+        2023.07.07         1527431               최초 생성
+    -->
+
+	<select id="selectTaskWbsItemEssentialYn" parameterType="hashmap" resultType="hashmap">
+        <![CDATA[
+		/* hds.tech.rpms.project.service.dao.WbsMakeGenTaskDao.selectTaskWbsItemEssentialYn : 단계별분류항목필수여부  */
+		SELECT  H.TASK_NO, M.ESSENTIAL_YN
+		  FROM  TB_TASK_BASE_INFO  H
+		  LEFT  JOIN TB_TASK_CLASS_ITEM  M
+		     ON M.TASK_CLASS  = H.TASK_CLASS
+		    AND M.TECH_CLASS1 = H.TECH_CLASS1
+		    AND M.TECH_CLASS2 = H.TECH_CLASS2
+		    AND M.TECH_CLASS3 = H.TECH_CLASS3
+		    AND M.TASK_TYPE   = H.TASK_TYPE_GQ
+		    AND M.DEPTH_GP    = LEFT(#{DEPTH_GP},3)
+		    AND M.ITEM_CD     = #{ITEM_CD}
+		  WHERE H.TASK_NO = #{TASK_NO}
+        ]]>
+    </select>
+
+	<!--
+        Query Name  : hds.tech.rpms.project.service.dao.WbsMakeGenTaskDao.selectCommCd
+        Description : WBS수행항목코드
+            since          author              description
+        ===========    =============    ===========================
+        2023.07.07         1527431               최초 생성
+    -->
+
+	<select id="selectCommCd" parameterType="hashmap" resultType="hashmap">
+        <![CDATA[
+		/* hds.tech.rpms.project.service.dao.WbsMakeGenTaskDao.selectCommCd : WBS수행항목코드  */
+		SELECT  M.COMM_GP
+		      , H.COMM_GP_NM
+		      , M.COMM_CD AS CD_VAL
+		      , M.COMM_NM AS CD_MNNG
+		      , CONCAT(M.COMM_CD, ' : ', M.COMM_NM) AS CD_VAL_MNNG
+		      , M.UPPER_CD
+		  FROM  TB_COMM_CD_GP  H
+		  LEFT  JOIN TB_COMM_CD  M
+		    ON  H.COMM_GP = M.COMM_GP
+		  WHERE M.COMM_GP = #{COMM_GP}
+		    AND M.USE_YN  = 'Y'
+		    AND H.USE_YN  = 'Y'
+		  ORDER BY M.UPPER_CD, M.COMM_CD
+        ]]>
+    </select>
+
+	<select id="selectTaskWbsItem" parameterType="hashmap" resultType="hashmap">
+        <![CDATA[
+		/* hds.tech.rpms.project.service.dao.WbsMakeGenTaskDao.selectTaskWbsItem : WBS수행항목  */
+		SELECT  H.TASK_NO
+		      , H.DEPTH_GP
+		      , H.ITEM_CD
+		      , H.ITEM_NM
+		      , H.ESSENTIAL_YN
+		  FROM  TB_TASK_WBS_ITEM  H
+		  WHERE H.TASK_NO = #{TASK_NO}
+		    AND H.DEPTH_GP = #{DEPTH_GP}
+		  ORDER BY H.ESSENTIAL_YN DESC, H.ITEM_CD
+        ]]>
+    </select>
+
+	<delete id="deleteTaskWbsItemPopup" parameterType="hashmap">
+        <![CDATA[
+		/* hds.tech.rpms.project.service.dao.WbsMakeGenTaskDao.deleteTaskWbsItemPopup : 과제 WBS항목 삭제  */
+		DELETE FROM TB_TASK_WBS_ITEM
+		  WHERE TASK_NO  = #{TASK_NO}
+		    AND DEPTH_GP = #{DEPTH_GP}
+		    AND ITEM_CD  = #{ITEM_CD}
+        ]]>
+    </delete>
+
+	<select id="selectTaskWbsItemPopup" parameterType="hashmap" resultType="hashmap">
+        <![CDATA[
+		/* hds.tech.rpms.project.service.dao.WbsMakeGenTaskDao.selectTaskWbsItemPopup : WBS수행항목  */
+		SELECT  H.DEPTH_GP
+		      , H.ITEM_CD
+		      , M.COMM_NM AS ITEM_NM
+		      , H.ESSENTIAL_YN
+		  FROM  TB_TASK_CLASS_ITEM  H
+		  LEFT  JOIN TB_COMM_CD  M
+		    ON  M.COMM_GP = 'ITEM_CD'
+		    AND H.ITEM_CD = M.COMM_CD
+		  WHERE 1=1
+		    AND H.DEPTH_GP = LEFT(#{DEPTH_GP},3)
+		    AND EXISTS (SELECT  'X'
+		                  FROM  TB_TASK_BASE_INFO  S
+		                  WHERE S.TASK_NO     = #{TASK_NO}
+		                    AND NVL(NULLIF(S.TASK_TYPE_GQ,''),S.TASK_TYPE) = H.TASK_TYPE
+		                    AND S.TASK_CLASS  = H.TASK_CLASS
+		                    AND S.TECH_CLASS1 = H.TECH_CLASS1
+		                    AND S.TECH_CLASS2 = H.TECH_CLASS2
+		                    AND S.TECH_CLASS3 = H.TECH_CLASS3)
+		  ORDER BY H.DEPTH_GP, H.ESSENTIAL_YN DESC, H.ITEM_CD
+        ]]>
+    </select>
+
+	<select id="selectTaskWbsItemDefault" parameterType="hashmap" resultType="hashmap">
+        <![CDATA[
+		/* hds.tech.rpms.project.service.dao.WbsMakeGenTaskDao.selectTaskWbsItemDefault : WBS수행항목(필수항목)  */
+		SELECT  H.DEPTH_GP
+	          , D.COMM_NM  DEPTH_NM
+	          , GROUP_CONCAT(CASE WHEN NULLIF(H.ITEM_CD,'') IS NOT NULL THEN CONCAT_WS('^', H.ITEM_CD, M.COMM_NM, NVL(NULLIF(H.ESSENTIAL_YN,''),'N')) END ORDER BY H.ESSENTIAL_YN DESC, H.ITEM_CD) ITEM_INFO
+	          , GROUP_CONCAT(H.ITEM_CD ORDER BY H.ESSENTIAL_YN DESC, H.ITEM_CD) ITEM_CD
+	          , GROUP_CONCAT(M.COMM_NM ORDER BY H.ESSENTIAL_YN DESC, H.ITEM_CD) ITEM_NM
+		  FROM  TB_TASK_CLASS_ITEM  H
+		  LEFT  JOIN TB_COMM_CD  M
+		    ON  M.COMM_GP = 'ITEM_CD'
+		    AND M.COMM_CD = H.ITEM_CD 
+		  LEFT  JOIN TB_COMM_CD  D
+		    ON  D.COMM_GP = 'DEPTH_GP'
+		    AND D.COMM_CD = H.DEPTH_GP 
+		  WHERE 1=1
+		    AND H.ESSENTIAL_YN = 'Y'
+		    AND EXISTS (SELECT  'X'
+		                  FROM  TB_TASK_BASE_INFO  S
+		                  WHERE S.TASK_NO     = #{TASK_NO}
+		                    AND NVL(NULLIF(S.TASK_TYPE_GQ,''),S.TASK_TYPE) = H.TASK_TYPE
+		                    AND S.TASK_CLASS  = H.TASK_CLASS
+		                    AND S.TECH_CLASS1 = H.TECH_CLASS1
+		                    AND S.TECH_CLASS2 = H.TECH_CLASS2
+		                    AND S.TECH_CLASS3 = H.TECH_CLASS3)
+		  GROUP BY H.DEPTH_GP, D.COMM_NM
+        ]]>
+    </select>
+
+	<select id="selectTaskWbsItemDefaultNew" parameterType="hashmap" resultType="hashmap">
+        <![CDATA[
+		/* hds.tech.rpms.project.service.dao.WbsMakeGenTaskDao.selectTaskWbsItemDefaultNew : WBS수행항목NEW  */
+		SELECT  H.DEPTH_GP
+	          , D.COMM_NM  DEPTH_NM
+	          , H.ITEM_CD
+	          , M.COMM_NM ITEM_NM
+	          , H.ESSENTIAL_YN
+		  FROM  TB_TASK_CLASS_ITEM  H
+		  LEFT  JOIN TB_COMM_CD  M
+		    ON  M.COMM_GP = 'ITEM_CD'
+		    AND M.COMM_CD = H.ITEM_CD 
+		  LEFT  JOIN TB_COMM_CD  D
+		    ON  D.COMM_GP = 'DEPTH_GP'
+		    AND D.COMM_CD = H.DEPTH_GP 
+		  WHERE 1=1
+		    AND EXISTS (SELECT  'X'
+		                  FROM  TB_TASK_BASE_INFO  S
+		                  WHERE S.TASK_NO     = #{TASK_NO}
+		                    AND NVL(NULLIF(S.TASK_TYPE_GQ,''),S.TASK_TYPE) = H.TASK_TYPE
+		                    AND S.TASK_CLASS  = H.TASK_CLASS
+		                    AND S.TECH_CLASS1 = H.TECH_CLASS1
+		                    AND S.TECH_CLASS2 = H.TECH_CLASS2
+		                    AND S.TECH_CLASS3 = H.TECH_CLASS3)
+		ORDER BY H.DEPTH_GP, H.ITEM_CD
+        ]]>
+    </select>
+
+	<update id="updateWbsTaskDepth" parameterType="hashmap">
+		/* hds.tech.rpms.project.service.dao.WbsMakeGenTaskDao.updateWbsTaskDepth : 과제Gate설정저장(PMO,TL공통)  */
+		UPDATE  TB_TASK_WBS_DEPTH
+		  SET   <if test='CHARGER_ID != null and CHARGER_ID != ""'>
+                CHARGER_ID      = #{CHARGER_ID},
+                </if>
+		  		<if test='DEPTH_NM != null and DEPTH_NM != ""'>
+		  	    DEPTH_NM        = #{DEPTH_NM},
+		  		</if>
+		  	    PLAN_START_DATE = #{PLAN_START_DATE},
+			    PLAN_END_DATE   = #{PLAN_END_DATE},
+		  		<if test='PLAN_PROG_RATE != null and PLAN_PROG_RATE != ""'>
+		  	    PLAN_PROG_RATE        = #{PLAN_PROG_RATE},
+		  		</if>
+		        MOD_ID          = #{MOD_ID},
+		        MOD_PGM         = #{MOD_PGM},
+		        MOD_DDTT        = SYSDATE()
+		  WHERE TASK_NO  = #{TASK_NO}
+		    AND DEPTH_GP = #{DEPTH_GP}
+	</update>    
+
+</mapper>
