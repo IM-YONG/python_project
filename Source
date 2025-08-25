@@ -1,0 +1,574 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:cl="http://tomatosystem.co.kr/cleopatra" xmlns:std="http://tomatosystem.co.kr/cleopatra/studio" std:sid="html-feb60fd5" version="1.0.4350">
+  <head std:sid="head-e4b76335">
+    <screen std:sid="screen-c5068a4b" id="EXB-FULL" name="EXB-FULL" minwidth="1440px" width="1440px" height="860px"/>
+    <screen std:sid="screen-3f333d28" id="EXB-DIV" name="EXB-DIV" minwidth="1024px" maxwidth="1439px" width="1024px" height="860px"/>
+    <screen std:sid="screen-aef91ee7" id="EXB-PART" name="EXB-PART" minwidth="768px" maxwidth="1023px" width="768px" height="860px"/>
+    <screen std:sid="screen-611c987f" id="EXB-POP" name="EXB-POP" maxwidth="767px" width="480px" height="580px"/>
+    <cl:model std:sid="model-40e7aef0">
+      <cl:dataset comment="과제WBS_ITEM" std:sid="d-set-8d5b97a8" id="dsTaskWbsInfo">
+        <cl:datacolumnlist>
+          <cl:datacolumn comment="단계 구분" std:sid="d-column-ff99a6e3" name="CODE_DEPTH_GP"/>
+          <cl:datacolumn comment="과제 번호" std:sid="d-column-b2cba1b0" name="TASK_NO"/>
+          <cl:datacolumn comment="과제 유형" std:sid="d-column-abdd0c80" name="TASK_TYPE"/>
+          <cl:datacolumn comment="단계 구분" std:sid="d-column-41ca8a4e" name="DEPTH_GP"/>
+          <cl:datacolumn comment="단계 명칭" std:sid="d-column-a9843a5b" name="DEPTH_NM"/>
+          <cl:datacolumn comment="담당자 ID" std:sid="d-column-39a1cff0" name="CHARGER_ID"/>
+          <cl:datacolumn comment="담당자" std:sid="d-column-848e2224" name="USER_NM"/>
+          <cl:datacolumn comment="계획 시작 일자" std:sid="d-column-df86052a" name="PLAN_START_DATE"/>
+          <cl:datacolumn comment="계획 종료 일자" std:sid="d-column-f40ebc56" name="PLAN_END_DATE"/>
+          <cl:datacolumn comment="계획진도율" std:sid="d-column-a296aab9" name="PLAN_PROG_RATE"/>
+          <cl:datacolumn comment="연도구분" std:sid="d-column-7c545a2b" name="YY_GP"/>
+          <cl:datacolumn comment="GATE 설정 여부 PMO" std:sid="d-column-b418ab1e" name="GATE_SET_YN_PMO"/>
+          <cl:datacolumn comment="GATE 설정 ID" std:sid="d-column-9eb7b6c4" name="GATE_SET_ID_PMO"/>
+          <cl:datacolumn comment="GATE 검토 의견" std:sid="d-column-b7909306" name="GATE_CHK_COMMENT_PMO"/>
+          <cl:datacolumn comment="GATE 설정 여부" std:sid="d-column-27b26bb8" name="GATE_SET_YN"/>
+          <cl:datacolumn comment="GATE 설정 ID" std:sid="d-column-8ed0773b" name="GATE_SET_ID"/>
+          <cl:datacolumn comment="GATE 검토 의견" std:sid="d-column-6a720ec4" name="GATE_CHK_COMMENT"/>
+          <cl:datacolumn comment="부서 코드" std:sid="d-column-5b0ea97d" name="DEPT_CD"/>
+          <cl:datacolumn comment="항목코드" std:sid="d-column-dcae43b4" name="ITEM_CD"/>
+          <cl:datacolumn comment="항목명" std:sid="d-column-8ea5f8a1" name="ITEM_NM"/>
+          <cl:datacolumn comment="ITEM별 계획 시작 일자" std:sid="d-column-035a7e97" name="PLAN_START_DATE_M"/>
+          <cl:datacolumn comment="ITEM별 계획 종료 일자" std:sid="d-column-14e74914" name="PLAN_END_DATE_M"/>
+          <cl:datacolumn comment="ITEM별 계획진도율" std:sid="d-column-02b99dfe" name="PLAN_PROG_RATE_M"/>
+          <cl:datacolumn comment="참여자정보" std:sid="d-column-a4389733" name="USER_INFO"/>
+          <cl:datacolumn comment="참여 사용자 ID" std:sid="d-column-d77e2433" name="ATT_USER_ID"/>
+          <cl:datacolumn comment="참여 사용자명" std:sid="d-column-4af1f531" name="ATT_USER_NM"/>
+          <cl:datacolumn std:sid="d-column-e2b37691" name="CHECK_YN"/>
+        </cl:datacolumnlist>
+      </cl:dataset>
+      <cl:dataset comment="단계" std:sid="d-set-3d0acfe1" id="dsDepthGp">
+        <cl:datacolumnlist>
+          <cl:datacolumn comment="코드구분" std:sid="d-column-1897a6ae" name="COMM_GP"/>
+          <cl:datacolumn comment="코드구분명칭" std:sid="d-column-ee55d0d6" name="COMM_GP_NM"/>
+          <cl:datacolumn comment="코드" std:sid="d-column-457743d0" name="CD_VAL"/>
+          <cl:datacolumn comment="코드명칭" std:sid="d-column-0fed02ad" name="CD_MNNG"/>
+          <cl:datacolumn comment="코드:코드명칭" std:sid="d-column-3f228492" name="CD_VAL_MNNG"/>
+          <cl:datacolumn comment="비고1" std:sid="d-column-a1562731" name="REMARK1"/>
+          <cl:datacolumn comment="비고2" std:sid="d-column-e5786e6a" name="REMARK2"/>
+          <cl:datacolumn comment="비고3" std:sid="d-column-1818caa0" name="REMARK3"/>
+          <cl:datacolumn comment="비고4" std:sid="d-column-efe87eb2" name="REMARK4"/>
+          <cl:datacolumn comment="비고5" std:sid="d-column-97a457e3" name="REMARK5"/>
+        </cl:datacolumnlist>
+      </cl:dataset>
+      <cl:dataset comment="분류_수행항목" std:sid="d-set-8f8c0c47" id="dsItemCd">
+        <cl:datacolumnlist>
+          <cl:datacolumn comment="단계 구분" std:sid="d-column-e09ad356" name="DEPTH_GP"/>
+          <cl:datacolumn comment="단계명" std:sid="d-column-cd6e88de" name="DEPTH_NM"/>
+          <cl:datacolumn comment="항목코드" std:sid="d-column-fed0cefe" name="ITEM_CD"/>
+          <cl:datacolumn comment="항목명" std:sid="d-column-9c94b105" name="ITEM_NM"/>
+          <cl:datacolumn comment="필수여부" std:sid="d-column-26cd7ddb" name="ESSENTIAL_YN"/>
+        </cl:datacolumnlist>
+      </cl:dataset>
+      <cl:dataset comment="WBS설정(일반과제)항목저장용" std:sid="d-set-213ea317" id="dsListItemSave">
+        <cl:datacolumnlist>
+          <cl:datacolumn comment="과제 번호" std:sid="d-column-b8fb42d5" name="TASK_NO"/>
+          <cl:datacolumn comment="단계구분(콤보)" std:sid="d-column-13db96a8" name="CODE_DEPTH_GP"/>
+          <cl:datacolumn comment="단계 구분(DB)" std:sid="d-column-39226759" name="DEPTH_GP"/>
+          <cl:datacolumn comment="항목 코드" std:sid="d-column-c9204b9d" name="ITEM_CD"/>
+          <cl:datacolumn comment="항목 명칭" std:sid="d-column-ad387b58" name="ITEM_NM"/>
+          <cl:datacolumn comment="계획 시작 일자" std:sid="d-column-a6557e20" name="PLAN_START_DATE"/>
+          <cl:datacolumn comment="계획 종료 일자" std:sid="d-column-01166ca6" name="PLAN_END_DATE"/>
+          <cl:datacolumn comment="계획 진도 율" std:sid="d-column-3145db97" name="PLAN_PROG_RATE"/>
+          <cl:datacolumn comment="삭제여부" std:sid="d-column-6bef3cda" name="DEL_YN"/>
+          <cl:datacolumn comment="코드구분" std:sid="d-column-cda79569" name="COMM_GP"/>
+          <cl:datacolumn comment="참여사용자ID" std:sid="d-column-3c3d1669" name="ATT_USER_ID"/>
+        </cl:datacolumnlist>
+      </cl:dataset>
+      <cl:dataset comment="페이지 ROW표시 처리 선택" std:sid="d-set-3db7012f" id="dsNavi" info="페이지 ROW표시 처리 선택">
+        <cl:datacolumnlist>
+          <cl:datacolumn std:sid="d-column-b879c5b5" name="CD_VAL" datatype="string"/>
+          <cl:datacolumn std:sid="d-column-17a053ab" name="CD_MNNG"/>
+        </cl:datacolumnlist>
+        <cl:datarowlist>
+          <cl:datarow>
+            <cl:datavalue columnname="CD_VAL">10</cl:datavalue>
+            <cl:datavalue columnname="CD_MNNG">10</cl:datavalue>
+          </cl:datarow>
+          <cl:datarow>
+            <cl:datavalue columnname="CD_VAL">20</cl:datavalue>
+            <cl:datavalue columnname="CD_MNNG">20</cl:datavalue>
+          </cl:datarow>
+          <cl:datarow>
+            <cl:datavalue columnname="CD_VAL">30</cl:datavalue>
+            <cl:datavalue columnname="CD_MNNG">30</cl:datavalue>
+          </cl:datarow>
+          <cl:datarow>
+            <cl:datavalue columnname="CD_VAL">50</cl:datavalue>
+            <cl:datavalue columnname="CD_MNNG">50</cl:datavalue>
+          </cl:datarow>
+          <cl:datarow>
+            <cl:datavalue columnname="CD_VAL">100</cl:datavalue>
+            <cl:datavalue columnname="CD_MNNG">100</cl:datavalue>
+          </cl:datarow>
+          <cl:datarow>
+            <cl:datavalue columnname="CD_VAL">10000</cl:datavalue>
+            <cl:datavalue columnname="CD_MNNG">10000</cl:datavalue>
+          </cl:datarow>
+          <cl:datarow>
+            <cl:datavalue columnname="CD_VAL">99999999</cl:datavalue>
+            <cl:datavalue columnname="CD_MNNG">전체</cl:datavalue>
+          </cl:datarow>
+        </cl:datarowlist>
+      </cl:dataset>
+      <cl:dataset comment="참여인원" std:sid="d-set-14b7442c" id="dsTASK_ATT_TNOP">
+        <cl:datacolumnlist>
+          <cl:datacolumn comment="참여 사용자 ID" std:sid="d-column-0a375551" name="ATT_USER_ID"/>
+          <cl:datacolumn comment="사용자명" std:sid="d-column-2248d14f" name="USER_NM"/>
+          <cl:datacolumn comment="부서코드" std:sid="d-column-be0ac398" name="DEPT_CD"/>
+          <cl:datacolumn comment="부서명" std:sid="d-column-1aba2443" name="DEPT_NM"/>
+          <cl:datacolumn comment="직급코드" std:sid="d-column-e234ea26" name="JOBGRADE_CD"/>
+          <cl:datacolumn comment="직급명" std:sid="d-column-275b8c88" name="JOBGRADE_NM"/>
+          <cl:datacolumn comment="ROLE코드" std:sid="d-column-b5676533" name="ROLE_CD"/>
+          <cl:datacolumn comment="ROLE명칭" std:sid="d-column-010f1f46" name="ROLE_NM"/>
+        </cl:datacolumnlist>
+      </cl:dataset>
+      <cl:dataset comment="WBS설정(일반과제)DEPTH항목저장용" std:sid="d-set-e9e12e08" id="dsListDepthSave">
+        <cl:datacolumnlist>
+          <cl:datacolumn comment="과제 번호" std:sid="d-column-5230ae83" name="TASK_NO"/>
+          <cl:datacolumn comment="단계구분(콤보)" std:sid="d-column-88c89c6a" name="CODE_DEPTH_GP"/>
+          <cl:datacolumn comment="단계 구분(DB)" std:sid="d-column-2eceb8f5" name="DEPTH_GP"/>
+          <cl:datacolumn comment="단계 명칭" std:sid="d-column-fc49dc09" name="DEPTH_NM"/>
+          <cl:datacolumn comment="담당자 ID" std:sid="d-column-70f0c58e" name="CHARGER_ID"/>
+          <cl:datacolumn comment="부서 코드" std:sid="d-column-d629532b" name="DEPT_CD"/>
+          <cl:datacolumn comment="계획 시작 일자" std:sid="d-column-91c32d6b" name="PLAN_START_DATE"/>
+          <cl:datacolumn comment="계획 종료 일자" std:sid="d-column-5b3606d3" name="PLAN_END_DATE"/>
+          <cl:datacolumn comment="계획 진도 율" std:sid="d-column-54ba4321" name="PLAN_PROG_RATE"/>
+          <cl:datacolumn comment="연도 구분" std:sid="d-column-a4360aaa" name="YY_GP"/>
+          <cl:datacolumn comment="GATE 설정 여부 PMO" std:sid="d-column-27a33cb8" name="GATE_SET_YN_PMO"/>
+          <cl:datacolumn comment="GATE 설정 ID" std:sid="d-column-44661097" name="GATE_SET_ID_PMO"/>
+          <cl:datacolumn comment="GATE 검토 의견" std:sid="d-column-848b38fe" name="GATE_CHK_COMMENT_PMO"/>
+          <cl:datacolumn comment="GATE 설정 여부" std:sid="d-column-b0401598" name="GATE_SET_YN"/>
+          <cl:datacolumn comment="GATE 설정 ID" std:sid="d-column-945103c1" name="GATE_SET_ID"/>
+          <cl:datacolumn comment="GATE 검토 의견" std:sid="d-column-041c6d98" name="GATE_CHK_COMMENT"/>
+        </cl:datacolumnlist>
+      </cl:dataset>
+      <cl:dataset comment="과제WBS_ITEM TEMP" std:sid="d-set-b977301d" id="dsTaskWbsInfoTemp">
+        <cl:datacolumnlist>
+          <cl:datacolumn comment="단계 구분" std:sid="d-column-307c070d" name="CODE_DEPTH_GP"/>
+          <cl:datacolumn comment="과제 번호" std:sid="d-column-27e050bf" name="TASK_NO"/>
+          <cl:datacolumn comment="과제 유형" std:sid="d-column-0a459280" name="TASK_TYPE"/>
+          <cl:datacolumn comment="단계 구분" std:sid="d-column-10cae4a0" name="DEPTH_GP"/>
+          <cl:datacolumn comment="단계 명칭" std:sid="d-column-dc9c2b55" name="DEPTH_NM"/>
+          <cl:datacolumn comment="담당자 ID" std:sid="d-column-8059ca77" name="CHARGER_ID"/>
+          <cl:datacolumn comment="담당자" std:sid="d-column-1e05f482" name="USER_NM"/>
+          <cl:datacolumn comment="계획 시작 일자" std:sid="d-column-ae1e6f79" name="PLAN_START_DATE"/>
+          <cl:datacolumn comment="계획 종료 일자" std:sid="d-column-be3b1776" name="PLAN_END_DATE"/>
+          <cl:datacolumn comment="계획진도율" std:sid="d-column-d7d523e8" name="PLAN_PROG_RATE"/>
+          <cl:datacolumn comment="연도구분" std:sid="d-column-5f9c821f" name="YY_GP"/>
+          <cl:datacolumn comment="GATE 설정 여부 PMO" std:sid="d-column-9d8d5168" name="GATE_SET_YN_PMO"/>
+          <cl:datacolumn comment="GATE 설정 ID" std:sid="d-column-0bc05d93" name="GATE_SET_ID_PMO"/>
+          <cl:datacolumn comment="GATE 검토 의견" std:sid="d-column-a94326c8" name="GATE_CHK_COMMENT_PMO"/>
+          <cl:datacolumn comment="GATE 설정 여부" std:sid="d-column-38fd0bcd" name="GATE_SET_YN"/>
+          <cl:datacolumn comment="GATE 설정 ID" std:sid="d-column-34f8d921" name="GATE_SET_ID"/>
+          <cl:datacolumn comment="GATE 검토 의견" std:sid="d-column-0880b24f" name="GATE_CHK_COMMENT"/>
+          <cl:datacolumn comment="부서 코드" std:sid="d-column-6459a079" name="DEPT_CD"/>
+          <cl:datacolumn comment="항목코드" std:sid="d-column-0d6f80b6" name="ITEM_CD"/>
+          <cl:datacolumn comment="항목명" std:sid="d-column-c78da64f" name="ITEM_NM"/>
+          <cl:datacolumn comment="ITEM별 계획 시작 일자" std:sid="d-column-a7fc4d7f" name="PLAN_START_DATE_M"/>
+          <cl:datacolumn comment="ITEM별 계획 종료 일자" std:sid="d-column-37f446b2" name="PLAN_END_DATE_M"/>
+          <cl:datacolumn comment="ITEM별 계획진도율" std:sid="d-column-716ca08a" name="PLAN_PROG_RATE_M"/>
+          <cl:datacolumn comment="참여자정보" std:sid="d-column-7defd8db" name="USER_INFO"/>
+          <cl:datacolumn comment="참여 사용자 ID" std:sid="d-column-d5d62221" name="ATT_USER_ID"/>
+          <cl:datacolumn comment="참여 사용자명" std:sid="d-column-ff8cc25e" name="ATT_USER_NM"/>
+        </cl:datacolumnlist>
+      </cl:dataset>
+      <cl:dataset comment="단계(TEMP)" std:sid="d-set-20ffa572" id="dsDepthGpTemp">
+        <cl:datacolumnlist>
+          <cl:datacolumn comment="코드" std:sid="d-column-fef1fd8a" name="CD_VAL"/>
+        </cl:datacolumnlist>
+      </cl:dataset>
+      <cl:datamap comment="사용자/pgm정보" std:sid="d-map-24f2d1da" id="dmParam">
+        <cl:datacolumnlist>
+          <cl:datacolumn comment="appId" std:sid="d-column-c1a13356" name="APP_ID"/>
+          <cl:datacolumn comment="사용자ID" std:sid="d-column-306dd546" name="USER_ID"/>
+          <cl:datacolumn comment="과제번호" std:sid="d-column-1440bbbb" name="TASK_NO"/>
+          <cl:datacolumn comment="과제 명칭" std:sid="d-column-89ed3749" name="TASK_NM"/>
+          <cl:datacolumn comment="과제유형" std:sid="d-column-da0e80e3" name="TASK_TYPE"/>
+          <cl:datacolumn comment="코드구분(단계)" std:sid="d-column-29236bbd" name="COMM_GP"/>
+          <cl:datacolumn comment="" std:sid="d-column-6733e13f" name="RESULT_CD"/>
+          <cl:datacolumn std:sid="d-column-55d2c676" name="RESULT_MSG"/>
+          <cl:datacolumn comment="진행상태" std:sid="d-column-7b658602" name="PROG_STAT"/>
+          <cl:datacolumn comment="과제 단계별 상태" std:sid="d-column-d7d7cff3" name="TASK_DEPTH_STAT"/>
+          <cl:datacolumn comment="저장구분" std:sid="d-column-9beecf01" name="SEPARATOR"/>
+          <cl:datacolumn std:sid="d-column-70a45aee" name="DEPTH_GP"/>
+          <cl:datacolumn std:sid="d-column-53f8b327" name="ITEM_CD"/>
+        </cl:datacolumnlist>
+      </cl:datamap>
+      <cl:datamap comment="분류/수행항목" std:sid="d-map-43c7a83d" id="dmItemCd">
+        <cl:datacolumnlist>
+          <cl:datacolumn comment="코드구분(항목)" std:sid="d-column-04317ef5" name="COMM_GP"/>
+        </cl:datacolumnlist>
+      </cl:datamap>
+      <cl:datamap comment="과제기본정보" std:sid="d-map-561a13d7" id="dmTaskBaseInfo">
+        <cl:datacolumnlist>
+          <cl:datacolumn comment="과제번호" std:sid="d-column-f63778ab" name="TASK_NO"/>
+          <cl:datacolumn comment="과제 명칭" std:sid="d-column-ea01d326" name="TASK_NM"/>
+          <cl:datacolumn comment="주관 부서 코드" std:sid="d-column-bcff52cb" name="SUPER_DEPT_CD"/>
+          <cl:datacolumn comment="부서명" std:sid="d-column-53b35ad6" name="DEPT_NM"/>
+          <cl:datacolumn comment="과제 PL 사번" std:sid="d-column-02b604e6" name="TASK_PL_EMPNO"/>
+          <cl:datacolumn comment="사용자명" std:sid="d-column-d5333f8d" name="USER_NM"/>
+          <cl:datacolumn comment="과제 시작 일자" std:sid="d-column-5ca3b692" name="TASK_START_DATE"/>
+          <cl:datacolumn comment="과제 종료 일자" std:sid="d-column-fa6f1e5c" name="TASK_END_DATE"/>
+          <cl:datacolumn comment="수행 배경" std:sid="d-column-ecb2442a" name="ACT_BACKGROUND"/>
+          <cl:datacolumn comment="수행 내용" std:sid="d-column-312788f7" name="ACT_CONTENTS"/>
+          <cl:datacolumn comment="기대 효과" std:sid="d-column-78e7b8ee" name="EXPECT_EFFECT"/>
+          <cl:datacolumn comment="과제 유형" std:sid="d-column-4e961428" name="TASK_TYPE"/>
+          <cl:datacolumn comment="과제 분류" std:sid="d-column-9434d9c5" name="TASK_CLASS"/>
+          <cl:datacolumn comment="기술 분류1" std:sid="d-column-f183f293" name="TECH_CLASS1"/>
+          <cl:datacolumn comment="기술 분류2" std:sid="d-column-bf3359ed" name="TECH_CLASS2"/>
+          <cl:datacolumn comment="기술 분류3" std:sid="d-column-833f91e4" name="TECH_CLASS3"/>
+          <cl:datacolumn comment="핵심 기술 여부" std:sid="d-column-040b23b1" name="CORE_TECH_YN"/>
+          <cl:datacolumn comment="연계전략_PTRM" std:sid="d-column-132ed846" name="LINK_STRT_PTRM"/>
+          <cl:datacolumn comment="연계전략_업무계획" std:sid="d-column-a380a83c" name="LINK_STRT_BIZPLAN"/>
+          <cl:datacolumn comment="연계전략_혁신지원" std:sid="d-column-db509019" name="LINK_STRT_INNOSUP"/>
+          <cl:datacolumn comment="연계전략_제품개발위원회" std:sid="d-column-c38df679" name="LINK_STRT_G_D_C"/>
+          <cl:datacolumn comment="과제 단계" std:sid="d-column-65f2a87c" name="TASK_DEPTH"/>
+          <cl:datacolumn comment="과제 단계별 상태" std:sid="d-column-203aa8a2" name="TASK_DEPTH_STAT"/>
+          <cl:datacolumn comment="진행 상태" std:sid="d-column-230dcea4" name="PROG_STAT"/>
+          <cl:datacolumn comment="단위 과제 번호" std:sid="d-column-76441331" name="UNIT_TASK_NO"/>
+          <cl:datacolumn comment="과제 유형(일반, 퀵과제 구분)" std:sid="d-column-cc06446e" name="TASK_TYPE_GQ"/>
+          <cl:datacolumn comment="로드맵 번호" std:sid="d-column-d7ffcfb0" name="RM_NO"/>
+          <cl:datacolumn comment="등록자ID" std:sid="d-column-7e56d7ee" name="REG_ID"/>
+          <cl:datacolumn comment="등록PgmId" std:sid="d-column-e60eec57" name="REG_PGM"/>
+          <cl:datacolumn comment="등록일자" std:sid="d-column-da35cdaa" name="REG_DDTT"/>
+          <cl:datacolumn comment="수정자ID" std:sid="d-column-b6f34221" name="MOD_ID"/>
+          <cl:datacolumn comment="수정일자" std:sid="d-column-d2860884" name="MOD_PGM"/>
+          <cl:datacolumn comment="수정일자" std:sid="d-column-4faf3c4a" name="MOD_DDTT"/>
+          <cl:datacolumn comment="결과코드" std:sid="d-column-1b43a8c8" name="RESULT_CD"/>
+          <cl:datacolumn comment="결과메시지" std:sid="d-column-9446b7bc" name="RESULT_MSG"/>
+          <cl:datacolumn comment="핵심기술구분" std:sid="d-column-a60c0fd7" name="CORE_TECH_GP"/>
+          <cl:datacolumn comment="연계기술번호" std:sid="d-column-2993994b" name="IF_TECH_NO"/>
+          <cl:datacolumn comment="실행 과제 번호" std:sid="d-column-f127966f" name="ACT_TASK_NO"/>
+          <cl:datacolumn comment="과제 방법론 상세&#x9;" std:sid="d-column-89da99eb" name="TASK_METHODOLOGY_DETAIL"/>
+        </cl:datacolumnlist>
+      </cl:datamap>
+      <cl:submission comment="단계별수행항목 조회" std:sid="submission-9919bf5d" id="subOnload" action="/project/wbsMake/getTaskItemCdNew.do">
+        <cl:requestdata dataid="dmParam"/>
+        <cl:responsedata dataid="dsItemCd"/>
+      </cl:submission>
+      <cl:submission comment="WBS설정(일반과제)조회" std:sid="submission-131597b8" id="subGetWbsTaskInfo" action="/project/wbsMake/getGenTaskInfoNew.do">
+        <cl:requestdata dataid="dmParam"/>
+        <cl:responsedata dataid="dsTaskWbsInfo"/>
+        <cl:responsedata dataid="dmTaskBaseInfo"/>
+      </cl:submission>
+      <cl:submission comment="WBS설정(일반과제)저장" std:sid="submission-9a376ee2" id="subSaveWbsTaskInfo" action="/project/wbsMake/saveGenTaskInfoNew.do">
+        <cl:requestdata dataid="dmParam"/>
+        <cl:requestdata dataid="dmItemCd"/>
+        <cl:requestdata dataid="dsListItemSave"/>
+        <cl:requestdata dataid="dsListDepthSave" payload="all"/>
+        <cl:responsedata dataid="dmParam"/>
+      </cl:submission>
+      <cl:submission comment="WBS설정(일반과제)삭제" std:sid="submission-f55ee989" id="subDeleteWbsTaskInfo" action="/project/wbsMake/deleteGenTaskInfoNew.do">
+        <cl:requestdata dataid="dsListItemSave"/>
+        <cl:requestdata dataid="dmParam"/>
+        <cl:requestdata dataid="dsListDepthSave" payload="all"/>
+      </cl:submission>
+      <cl:submission comment="과제WBS단계수정(수정모드)" std:sid="submission-90493bfe" id="subUpdateWbsTaskDepth" action="/project/wbsMake/updateWbsTaskDepthNew.do">
+        <cl:requestdata dataid="dmParam"/>
+        <cl:requestdata dataid="dsListItemSave"/>
+        <cl:requestdata dataid="dmItemCd"/>
+        <cl:requestdata dataid="dsListDepthSave" payload="all"/>
+        <cl:responsedata dataid="dmParam"/>
+      </cl:submission>
+      <cl:submission std:sid="submission-b54db6cf" id="subGetUserNmInfo" action="/project/wbsMake/getUserNmInfo.do">
+        <cl:requestdata dataid="dmParam"/>
+        <cl:responsedata dataid="dsTASK_ATT_TNOP"/>
+      </cl:submission>
+    </cl:model>
+    <cl:appspec title="WBS설정(일반과제)NEW"/>
+  </head>
+  <body std:sid="body-cabb2e4d" class="content-wrapper">
+    <cl:listener std:sid="listener-10768a8a" name="init" handler="onBodyInit"/>
+    <cl:listener std:sid="listener-c2a021ff" name="load" handler="onBodyLoad"/>
+    <cl:group std:sid="group-dc4c98bc" id="header" class="rpms-title">
+      <cl:xylayoutdata std:sid="xyl-data-42be18b6" top="0px" right="0px" left="0px" height="60px" horizontalAnchor="BOTH" verticalAnchor="TOP"/>
+      <cl:output std:sid="output-b2c9b5e6" id="optTit" class="fs-title" value="WBS설정(일반과제)">
+        <cl:formdata std:sid="f-data-75a25e81" valign="FILL" row="0" col="0" rowspan="1" colspan="1"/>
+      </cl:output>
+      <cl:group std:sid="group-faace9a9" id="_grpBtnInfo">
+        <cl:formdata std:sid="f-data-06d33087" valign="CENTER" height="34" row="0" col="1" rowspan="1" colspan="1"/>
+        <cl:button std:sid="button-9e7b84fe" id="btnSave" class="btn-lg btn-outline-gray btn-round_5" value="임시저장">
+          <cl:listener std:sid="listener-dc0dada4" name="click" handler="onBtnSaveClick"/>
+          <cl:flowlayoutdata std:sid="f-data-c5f988bc" width="100px" height="34px" autosize="none"/>
+        </cl:button>
+        <cl:button std:sid="button-add81351" id="btnApproval" class="btn-lg btn-outline-gray btn-round_5" value="생성요청">
+          <cl:listener std:sid="listener-5ec57e17" name="click" handler="onBtnApprovalClick"/>
+          <cl:flowlayoutdata std:sid="f-data-09205737" width="100px" height="34px" autosize="none"/>
+        </cl:button>
+        <cl:flowlayout std:sid="f-layout-72ceea6e" hspacing="8" vspacing="0" halign="right"/>
+      </cl:group>
+      <cl:formlayout std:sid="f-layout-34c8fb8b" scrollable="false" hspace="24px" vspace="0px" top-margin="0px" right-margin="8px" bottom-margin="0px" left-margin="8px">
+        <cl:rows length="1" unit="FRACTION"/>
+        <cl:columns length="1" unit="FRACTION" autoSizing="false" hidden="false" shadetype="NONE" shadecolor="#000000" minlength="0"/>
+        <cl:columns length="1" unit="FRACTION" autoSizing="false" hidden="false" minlength="0"/>
+      </cl:formlayout>
+    </cl:group>
+    <cl:group std:sid="group-eeb7d69e" id="body" class="content-body">
+      <cl:xylayoutdata std:sid="xyl-data-3c15208b" top="60px" right="0px" bottom="0px" left="0px" horizontalAnchor="BOTH" verticalAnchor="BOTH"/>
+      <cl:group std:sid="group-15caddfa" id="grpContent">
+        <cl:formdata std:sid="f-data-57cb7650" row="0" col="0"/>
+        <cl:group std:sid="group-c3408c92" id="searchBox" class="search-box">
+          <cl:formdata std:sid="f-data-b5dda6ff" row="0" col="0"/>
+          <cl:group std:sid="group-11dcd72a">
+            <cl:formdata std:sid="f-data-59a1a851" row="0" col="0"/>
+            <cl:group std:sid="group-2f6b9890">
+              <cl:formdata std:sid="f-data-dbea10a2" height="32" leftSpacing="0" row="0" col="0"/>
+              <cl:group std:sid="group-2d6fafca">
+                <cl:formdata std:sid="f-data-e05d21ef" row="0" col="0"/>
+                <cl:output std:sid="output-df427ca1" class="label" value="과제번호">
+                  <cl:formdata std:sid="f-data-e47bc546" row="0" col="0"/>
+                </cl:output>
+                <cl:output std:sid="output-ceef5aae" class="label" value="과제명">
+                  <cl:formdata std:sid="f-data-86b586d4" row="0" col="2"/>
+                </cl:output>
+                <cl:output std:sid="output-80537dbe" class="label" value="과제유형">
+                  <cl:formdata std:sid="f-data-f7cf948d" row="0" col="7"/>
+                </cl:output>
+                <cl:inputbox std:sid="i-box-d8e0550d" id="ipbTaskNo" readonly="true">
+                  <cl:datamapbind property="value" datacontrolid="dmParam" columnname="TASK_NO"/>
+                  <cl:formdata std:sid="f-data-49cbb003" row="0" col="1"/>
+                </cl:inputbox>
+                <cl:inputbox comment="과제명" std:sid="i-box-65c277bc" id="ipbTaskNm" readonly="true">
+                  <cl:datamapbind property="value" datacontrolid="dmParam" columnname="TASK_NM"/>
+                  <cl:formdata std:sid="f-data-411a144f" row="0" col="3"/>
+                </cl:inputbox>
+                <cl:inputbox std:sid="i-box-26c05ee0" id="ipbTaskType">
+                  <cl:datamapbind property="value" datacontrolid="dmParam" columnname="TASK_TYPE"/>
+                  <cl:formdata std:sid="f-data-c14a27f3" row="0" col="8"/>
+                </cl:inputbox>
+                <cl:output std:sid="output-f1b3136e" class="label" value="과제기간">
+                  <cl:formdata std:sid="f-data-e28601d7" row="0" col="4"/>
+                </cl:output>
+                <cl:dateinput std:sid="d-input-d10ec93e" id="dtiTaskStartDate" style="text-align:center;" enabled="false">
+                  <cl:formdata std:sid="f-data-03b95786" row="0" col="5"/>
+                </cl:dateinput>
+                <cl:dateinput std:sid="d-input-66ec4d3f" id="dtiTaskEndDate" style="text-align:center;" enabled="false">
+                  <cl:formdata std:sid="f-data-e5f456ae" row="0" col="6"/>
+                </cl:dateinput>
+                <cl:formlayout std:sid="f-layout-525b5a9b" scrollable="false">
+                  <cl:rows length="1" unit="FRACTION"/>
+                  <cl:columns length="80" unit="PIXEL" autoSizing="true" shadecolor="#000000" minlength="0"/>
+                  <cl:columns length="1" unit="FRACTION"/>
+                  <cl:columns length="80" unit="PIXEL" autoSizing="true"/>
+                  <cl:columns length="3" unit="FRACTION"/>
+                  <cl:columns length="80" unit="PIXEL" autoSizing="true"/>
+                  <cl:columns length="1" unit="FRACTION"/>
+                  <cl:columns length="1" unit="FRACTION"/>
+                  <cl:columns length="80" unit="PIXEL" autoSizing="true" hidden="true"/>
+                  <cl:columns length="1" unit="FRACTION" hidden="true"/>
+                </cl:formlayout>
+              </cl:group>
+              <cl:formlayout std:sid="f-layout-eafddbb2" scrollable="false" hspace="0px" vspace="0px" top-margin="0px" right-margin="0px" bottom-margin="0px" left-margin="0px">
+                <cl:rows length="1" unit="FRACTION" shadetype="NONE" shadecolor="transparent"/>
+                <cl:columns length="1" unit="FRACTION"/>
+              </cl:formlayout>
+            </cl:group>
+            <cl:formlayout std:sid="f-layout-b59e6127" scrollable="false" hspace="0px" vspace="10px" top-margin="10px">
+              <cl:rows length="30" unit="PIXEL" autoSizing="false" hidden="false" shadetype="NONE" shadecolor="#000000" minlength="32"/>
+              <cl:columns length="1" unit="FRACTION" autoSizing="false" shadetype="NONE" shadecolor="#000000" minlength="0"/>
+            </cl:formlayout>
+          </cl:group>
+          <cl:group std:sid="group-468f202e" style="border-left-style:solid; border-left-color:#E4EAFF; border-left-width:1px;">
+            <cl:formdata std:sid="f-data-53e541a4" leftSpacing="30" row="0" col="1"/>
+            <cl:button std:sid="button-f8a88030" id="btnSearch" class="btn-blue btn-round_5" value="조회">
+              <cl:listener std:sid="listener-64620df9" name="click" handler="doSearch"/>
+              <cl:flowlayoutdata std:sid="f-data-01090e89" width="80px" height="36px" autosize="none"/>
+            </cl:button>
+            <cl:flowlayout std:sid="f-layout-a5a60ee8" scrollable="false" vspacing="0" halign="center" linewrap="false" topmargin="5"/>
+          </cl:group>
+          <cl:formlayout std:sid="f-layout-b6147950" scrollable="false" animationduration="1.0" hspace="0px" vspace="0px" vseparatortype="NONE">
+            <cl:rows length="1" unit="FRACTION" shadetype="NONE" shadecolor="transparent" minlength="0"/>
+            <cl:columns length="1" unit="FRACTION"/>
+            <cl:columns length="300" unit="PIXEL" shadetype="NONE" shadecolor="transparent"/>
+          </cl:formlayout>
+        </cl:group>
+        <cl:group std:sid="group-6764d9b9" id="gridContent">
+          <cl:formdata std:sid="f-data-60347889" row="1" col="0" rowspan="1" colspan="1"/>
+          <cl:group std:sid="group-7b7f8756">
+            <cl:formdata std:sid="f-data-e91078a2" valign="BOTTOM" height="36" row="0" col="0"/>
+            <cl:output std:sid="output-7ef7dcf0" class="data-title" value="조회목록">
+              <cl:formdata std:sid="f-data-bab68586" row="0" col="0"/>
+            </cl:output>
+            <cl:group std:sid="group-ce5a014b">
+              <cl:formdata std:sid="f-data-97834e75" row="0" col="1"/>
+              <cl:button std:sid="button-67927376" id="btnStep" class="btn-lg btn-outline-gray btn-round_5" value="단계추가">
+                <cl:listener std:sid="listener-d147ae38" name="click" handler="onBtnStepClick"/>
+                <cl:flowlayoutdata std:sid="f-data-e509e0d5" width="90px" height="34px" autosize="none"/>
+              </cl:button>
+              <cl:button std:sid="button-4d354f73" id="btnAdd" class="btn-lg btn-outline-gray btn-round_5" value="행추가">
+                <cl:listener std:sid="listener-e1ae5981" name="click" handler="onBtnInsertRowClick"/>
+                <cl:flowlayoutdata std:sid="f-data-fac8238b" width="70px" height="34px" autosize="none"/>
+              </cl:button>
+              <cl:button std:sid="button-4b32b152" id="btnDelete" class="btn-lg btn-outline-gray btn-round_5" value="행삭제">
+                <cl:listener std:sid="listener-35cba7fe" name="click" handler="onBtnDeleteRowClick"/>
+                <cl:flowlayoutdata std:sid="f-data-211480e3" width="70px" height="34px" autosize="none"/>
+              </cl:button>
+              <cl:flowlayout std:sid="f-layout-55e1af6f" scrollable="false" hspacing="4" vspacing="0" halign="right" valign="middle" linewrap="false"/>
+            </cl:group>
+            <cl:formlayout std:sid="f-layout-08450ba1" scrollable="false" hspace="0px" vspace="0px" top-margin="0px" right-margin="0px" bottom-margin="0px" left-margin="0px">
+              <cl:rows length="1" unit="FRACTION"/>
+              <cl:columns length="1" unit="FRACTION"/>
+              <cl:columns length="1" unit="FRACTION"/>
+            </cl:formlayout>
+          </cl:group>
+          <cl:group std:sid="group-91ca91d0">
+            <cl:formdata std:sid="f-data-fd84b7c0" row="2" col="0"/>
+            <cl:group std:sid="group-3f8bfaf8">
+              <cl:formdata std:sid="f-data-f42c5436" row="0" col="0"/>
+              <cl:output std:sid="output-2b5fa087" style="padding-top:4px; vertical-align:middle; text-align:left;" class="search-title" value="총건 :" unselectable="false">
+                <cl:formdata std:sid="f-data-6fa1f780" row="0" col="0"/>
+              </cl:output>
+              <cl:output std:sid="output-2e3ce876" id="outPutTotal" style="color:#60a8ec;" class="search-title" value="" datatype="number" unselectable="false">
+                <cl:formdata std:sid="f-data-8da81cea" row="0" col="1"/>
+              </cl:output>
+              <cl:formlayout std:sid="f-layout-590ff0ac" hspace="10px" vspace="10px" top-margin="0px" right-margin="0px" bottom-margin="0px" left-margin="0px">
+                <cl:rows length="1" unit="FRACTION"/>
+                <cl:columns length="40" unit="PIXEL" autoSizing="true" shadetype="NONE" shadecolor="#000000" minlength="0"/>
+                <cl:columns length="1" unit="FRACTION"/>
+              </cl:formlayout>
+            </cl:group>
+            <cl:combobox std:sid="c-box-1d9e47b4" id="cmbRowCountSelect" style="border-radius:3px;" value="20" preventinput="true">
+              <cl:formdata std:sid="f-data-7e89e776" row="0" col="2"/>
+              <cl:itemset datasetid="dsNavi" label="CD_MNNG" value="CD_VAL"/>
+            </cl:combobox>
+            <cl:pageindexer std:sid="p-indexer-132da15d" id="pageIndexer" pagerowcount="20" viewpagecount="10" pageindexwidth="20px">
+              <cl:expbind property="totalRowCount" category="PROPERTY" expression="#dsList.getRowCount()"/>
+              <cl:formdata std:sid="f-data-503c6c05" row="0" col="1"/>
+            </cl:pageindexer>
+            <cl:formlayout std:sid="f-layout-9c58cfa5" hspace="5px" vspace="5px" top-margin="5px" right-margin="5px" bottom-margin="5px" left-margin="5px">
+              <cl:rows length="1" unit="FRACTION"/>
+              <cl:columns length="130" unit="PIXEL" autoSizing="false" shadetype="NONE" shadecolor="#000000" minlength="0"/>
+              <cl:columns length="1" unit="FRACTION"/>
+              <cl:columns length="130" unit="PIXEL" autoSizing="false" shadetype="NONE" shadecolor="#000000" minlength="0"/>
+            </cl:formlayout>
+          </cl:group>
+          <cl:grid std:sid="grid-13c0d331" id="grd1" datasetid="dsTaskWbsInfo" autofit="0, 2, 6, 10, 11" resizablecolumns="all">
+            <cl:listener std:sid="listener-b405ef58" name="update" handler="onGrd1Update"/>
+            <cl:formdata std:sid="f-data-5ec6eedf" row="1" col="0"/>
+            <cl:gridcolumn std:sid="g-column-7c49a421" width="25px"/>
+            <cl:gridcolumn std:sid="g-column-46d57b2c" width="40px"/>
+            <cl:gridcolumn std:sid="g-column-445dfdea" visible="false"/>
+            <cl:gridcolumn std:sid="g-column-0262e48b" width="200px"/>
+            <cl:gridcolumn std:sid="g-column-ab01df29" width="250px"/>
+            <cl:gridcolumn std:sid="g-column-a65875f9" width="260px"/>
+            <cl:gridcolumn std:sid="g-column-003db9c1" width="287px"/>
+            <cl:gridcolumn std:sid="g-column-38ec4461" width="100px"/>
+            <cl:gridcolumn std:sid="g-column-8294e356" width="150px"/>
+            <cl:gridcolumn std:sid="g-column-90280d7a" width="150px"/>
+            <cl:gridcolumn std:sid="g-column-b52f9b75" visible="false"/>
+            <cl:gridcolumn std:sid="g-column-f6416351" visible="false"/>
+            <cl:gridcolumn std:sid="g-column-6db4f60b" width="110px" visible="false"/>
+            <cl:gridcolumn std:sid="g-column-4ff89bfb" width="110px" visible="false"/>
+            <cl:gridcolumn std:sid="g-column-8787a556" visible="false"/>
+            <cl:gridcolumn std:sid="g-column-036777bf" visible="false"/>
+            <cl:gridcolumn std:sid="g-column-54ec9497" visible="false"/>
+            <cl:gridcolumn std:sid="g-column-065284f8" visible="false"/>
+            <cl:gridheader std:sid="gh-band-c8628c67">
+              <cl:gridrow std:sid="g-row-c1b364e9" height="60px"/>
+              <cl:gridcell std:sid="gh-cell-c920cfb9" rowindex="0" colindex="0" sortable="false" filterable="false" columntype="checkbox"/>
+              <cl:gridcell std:sid="gh-cell-84bd0778" rowindex="0" colindex="1" sortable="false" filterable="false"/>
+              <cl:gridcell std:sid="gh-cell-ad8f1e40" rowindex="0" colindex="2" targetcolumnname="TASK_NO" sortable="false" filterable="false" text="과제 번호"/>
+              <cl:gridcell std:sid="gh-cell-2ea7a339" rowindex="0" colindex="3" targetcolumnname="CODE_DEPTH_GP" sortable="false" filterable="false" text="단계"/>
+              <cl:gridcell std:sid="gh-cell-048279ca" rowindex="0" colindex="4" targetcolumnname="DEPTH_NM" text="TASK"/>
+              <cl:gridcell std:sid="gh-cell-513e1ebc" rowindex="0" colindex="5" targetcolumnname="ITEM_NM" sortable="false" filterable="false" text="분류 / 수행항목"/>
+              <cl:gridcell std:sid="gh-cell-47cd01fc" rowindex="0" colindex="8" targetcolumnname="PLAN_START_DATE" sortable="false" filterable="false" text="시작일자"/>
+              <cl:gridcell std:sid="gh-cell-09702754" rowindex="0" colindex="9" text="종료일자"/>
+              <cl:gridcell std:sid="gh-cell-bac61b5c" rowindex="0" colindex="10" targetcolumnname="ITEM_CD" text="항목"/>
+              <cl:gridcell std:sid="gh-cell-18c6b66f" rowindex="0" colindex="11" targetcolumnname="DEPTH_GP" text="단계"/>
+              <cl:gridcell std:sid="gh-cell-f0d20be2" rowindex="0" colindex="13" text="참여사용자정보"/>
+              <cl:gridcell std:sid="gh-cell-3f4b6e95" rowindex="0" colindex="6" text="참여인력"/>
+              <cl:gridcell std:sid="gh-cell-5b57241e" rowindex="0" colindex="7" text="진도율(%)"/>
+              <cl:gridcell std:sid="gh-cell-46d5529e" rowindex="0" colindex="12" text="참여사용자ID"/>
+              <cl:gridcell std:sid="gh-cell-204d84f4" rowindex="0" colindex="14" text="계획시작일"/>
+              <cl:gridcell std:sid="gh-cell-49671722" rowindex="0" colindex="15" text="계획종료일"/>
+              <cl:gridcell std:sid="gh-cell-b09db4f3" rowindex="0" colindex="16" text="계획진도율"/>
+              <cl:gridcell std:sid="gh-cell-3b888092" rowindex="0" colindex="17"/>
+            </cl:gridheader>
+            <cl:griddetail std:sid="gd-band-98ef4a32">
+              <cl:gridrow std:sid="g-row-c5101820" height="40px"/>
+              <cl:gridcell std:sid="gd-cell-69d0fcec" rowindex="0" colindex="0" columntype="checkbox"/>
+              <cl:gridcell std:sid="gd-cell-db7e36f9" rowindex="0" colindex="1" columntype="rowindex"/>
+              <cl:gridcell std:sid="gd-cell-0847fcbe" rowindex="0" colindex="2" columnname="TASK_NO"/>
+              <cl:gridcell std:sid="gd-cell-b1c20430" rowindex="0" colindex="3" columnname="CODE_DEPTH_GP">
+                <cl:combobox comment="단계" std:sid="c-box-795a1d78" id="cmbDepthGp" preventinput="true">
+                  <cl:listener std:sid="listener-6388f2d3" name="click" handler="onCmbDepthGpClick"/>
+                  <cl:listener std:sid="listener-c9477ed3" name="selection-change" handler="onCmbDepthGpSelectionChange2"/>
+                  <cl:attribute name="columnSortFix" value="Y"/>
+                  <cl:celldata std:sid="c-data-00325e45"/>
+                  <cl:itemset datasetid="dsDepthGp" label="CD_MNNG" value="CD_VAL"/>
+                </cl:combobox>
+              </cl:gridcell>
+              <cl:gridcell std:sid="gd-cell-cd26a2df" rowindex="0" colindex="4" columnname="DEPTH_NM">
+                <cl:inputbox std:sid="i-box-ff2c5a79" id="ipb1">
+                  <cl:attribute name="columnSortFix" value="Y"/>
+                  <cl:celldata std:sid="c-data-349e75c8"/>
+                </cl:inputbox>
+              </cl:gridcell>
+              <cl:gridcell std:sid="gd-cell-d7f67d7b" rowindex="0" colindex="5" columnname="ITEM_NM">
+                <cl:searchinput std:sid="s-input-7b2526a9" id="sipItemNm" readonly="true" hideclearbutton="true">
+                  <cl:listener std:sid="listener-49071fcb" name="search" handler="onSipItemCdSearch"/>
+                  <cl:attribute name="columnSortFix" value="Y"/>
+                  <cl:celldata std:sid="c-data-b631f9de"/>
+                </cl:searchinput>
+              </cl:gridcell>
+              <cl:gridcell std:sid="gd-cell-d3270f13" rowindex="0" colindex="8" columnname="PLAN_START_DATE_M">
+                <cl:dateinput std:sid="d-input-0a66d575" id="dtiPlanStartDate" style="text-align:center;">
+                  <cl:attribute name="columnSortFix" value="Y"/>
+                  <cl:celldata std:sid="c-data-b431b7c0"/>
+                </cl:dateinput>
+              </cl:gridcell>
+              <cl:gridcell std:sid="gd-cell-4aeb9f8a" rowindex="0" colindex="9" columnname="PLAN_END_DATE_M">
+                <cl:dateinput std:sid="d-input-998b2eaf" id="dtidtiPlanEndDate" style="text-align:center;">
+                  <cl:attribute name="columnSortFix" value="Y"/>
+                  <cl:celldata std:sid="c-data-ab2e8f42"/>
+                </cl:dateinput>
+              </cl:gridcell>
+              <cl:gridcell std:sid="gd-cell-b54c685c" rowindex="0" colindex="10" columnname="ITEM_CD"/>
+              <cl:gridcell std:sid="gd-cell-ccfc3ef6" rowindex="0" colindex="11" columnname="DEPTH_GP"/>
+              <cl:gridcell std:sid="gd-cell-3026d9c1" rowindex="0" colindex="13" columnname="USER_INFO"/>
+              <cl:gridcell std:sid="gd-cell-a5d964c0" rowindex="0" colindex="6" columnname="ATT_USER_NM">
+                <cl:searchinput std:sid="s-input-cfde226b" id="sipGridUserNm" hideclearbutton="true">
+                  <cl:listener std:sid="listener-1bdee728" name="search" handler="onSipGridUserNmSearch"/>
+                  <cl:celldata std:sid="c-data-e9157808"/>
+                </cl:searchinput>
+              </cl:gridcell>
+              <cl:gridcell std:sid="gd-cell-b6934baa" rowindex="0" colindex="7" columnname="PLAN_PROG_RATE_M">
+                <cl:inputbox std:sid="i-box-09a8925a" id="ipb2" style="text-align:center;">
+                  <cl:celldata std:sid="c-data-4cd14de8"/>
+                </cl:inputbox>
+              </cl:gridcell>
+              <cl:gridcell std:sid="gd-cell-aa568351" rowindex="0" colindex="12" columnname="ATT_USER_ID"/>
+              <cl:gridcell std:sid="gd-cell-1e6726a1" rowindex="0" colindex="14" columnname="PLAN_START_DATE"/>
+              <cl:gridcell std:sid="gd-cell-bc6fd0d4" rowindex="0" colindex="15" columnname="PLAN_END_DATE"/>
+              <cl:gridcell std:sid="gd-cell-7291ef6c" rowindex="0" colindex="16" columnname="PLAN_PROG_RATE"/>
+              <cl:gridcell std:sid="gd-cell-56d62484" rowindex="0" colindex="17" columnname="CHECK_YN"/>
+            </cl:griddetail>
+          </cl:grid>
+          <cl:formlayout std:sid="f-layout-f8174c06" scrollable="false" hspace="0px" vspace="0px">
+            <cl:rows length="36" unit="PIXEL" shadecolor="transparent"/>
+            <cl:rows length="1" unit="FRACTION" shadecolor="transparent"/>
+            <cl:rows length="40" unit="PIXEL" hidden="true" shadecolor="transparent"/>
+            <cl:columns length="1" unit="FRACTION"/>
+          </cl:formlayout>
+        </cl:group>
+        <cl:formlayout std:sid="f-layout-3f931b48" scrollable="false" hspace="0px" vspace="20px" top-margin="8px" right-margin="8px" bottom-margin="8px" left-margin="8px">
+          <cl:rows length="90" unit="PIXEL" shadetype="NONE" shadecolor="transparent"/>
+          <cl:rows length="1" unit="FRACTION" shadetype="NONE" shadecolor="transparent"/>
+          <cl:columns length="1" unit="FRACTION"/>
+        </cl:formlayout>
+      </cl:group>
+      <cl:formlayout std:sid="f-layout-91c726c9" scrollable="false" hspace="0px" vspace="10px" top-margin="0px" right-margin="0px" bottom-margin="0px" left-margin="0px">
+        <cl:rows length="1" unit="FRACTION"/>
+        <cl:columns length="1" unit="FRACTION"/>
+      </cl:formlayout>
+    </cl:group>
+    <cl:xylayout std:sid="xylayout-5b4043b0"/>
+  </body>
+  <std:studiosetting>
+    <std:hruler>
+      <std:guide position="822"/>
+    </std:hruler>
+    <std:vruler/>
+  </std:studiosetting>
+</html>
