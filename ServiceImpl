@@ -1,0 +1,1307 @@
+package hds.tech.rpms.project.service.impl;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+
+import com.cleopatra.protocol.data.DataRequest;
+import com.cleopatra.protocol.data.ParameterGroup;
+
+import hds.tech.rpms.common.service.dao.CommonDao;
+import hds.tech.rpms.project.service.WbsMakeGenTaskService;
+import hds.tech.rpms.project.service.dao.ProjectProposalDao;
+import hds.tech.rpms.project.service.dao.ProjectProposalListDao;
+import hds.tech.rpms.project.service.dao.WbsMakeGenTaskDao;
+import hds.tech.rpms.system.service.dao.UserInfoDao;
+
+@Service("WbsMakeGenTaskService")
+public class WbsMakeGenTaskServiceImpl implements WbsMakeGenTaskService {
+	private static final Logger logger = LoggerFactory.getLogger(WbsMakeGenTaskServiceImpl.class);
+
+	@Resource(name = "wbsMakeGenTaskDao")
+	private WbsMakeGenTaskDao wbsMakeGenTaskDao;
+
+	@Resource(name = "projectProposalDao")
+	private ProjectProposalDao projectProposalDao;
+
+	@Resource(name = "projectProposalListDao")
+	private ProjectProposalListDao projectProposalListDao;
+
+	@Resource(name = "userInfoDao")
+	private UserInfoDao userInfoDao;
+
+	@Resource(name = "commonDao")
+	private CommonDao commonDao;
+
+	@Override
+	public List<Map<String, Object>> selectTaskWbsInfo(Map<String, String> paramMap) throws Exception {
+		// TODO Auto-generated method stub
+		return wbsMakeGenTaskDao.selectTaskWbsInfo(paramMap);
+	}
+
+	@Override
+	public List<Map<String, Object>> selectTaskWbsInfoNew(Map<String, String> paramMap) throws Exception {
+		// TODO Auto-generated method stub
+		return wbsMakeGenTaskDao.selectTaskWbsInfoNew(paramMap);
+	}
+
+	@Override
+	public List<Map<String, Object>> selectUserNmInfo(Map<String, String> paramMap) throws Exception {
+		// TODO Auto-generated method stub
+		return wbsMakeGenTaskDao.selectUserNmInfo(paramMap);
+	}
+
+	@Override
+	public Map<String, String> saveTaskWbsInfo(DataRequest dataRequest) throws Exception {
+		
+		List<Map<String, String>> dsList = dataRequest.getParameterGroup("dsListSave").getAllRowList();
+		Map<String, String> paramMap = dataRequest.getParameterGroup("dmParam").getSingleValueMap();
+		Map<String, String> dmItemCd = dataRequest.getParameterGroup("dmItemCd").getSingleValueMap();
+		Map<String, String> mapDup = new HashMap<>();
+		Map<String, Object> retMap = new HashMap<>();
+		
+		paramMap.put("REG_ID"    , paramMap.get("USER_ID"));
+		paramMap.put("REG_PGM"	 , paramMap.get("APP_ID"));
+		paramMap.put("MOD_ID" 	 , paramMap.get("USER_ID"));
+		paramMap.put("MOD_PGM"	 , paramMap.get("APP_ID"));
+		
+		//----------------------------------------------------------------------------
+		logger.debug("▶ [과제 WBS 공통(검토) 생성]");
+		//----------------------------------------------------------------------------
+		wbsMakeGenTaskDao.insertTaskWbs(paramMap);
+		
+		//----------------------------------------------------------------------------
+		logger.debug("▶ [과제 WBS 단계 생성]");
+		//----------------------------------------------------------------------------
+		if (dsList.size() > 0) {
+			for (Map<String, String> map : dsList) {
+				if ("".equals(map.get("TASK_NO"))) {
+					mapDup.put("TASK_NO", paramMap.get("TASK_NO"));
+					mapDup.put("CODE_DEPTH_GP", map.get("CODE_DEPTH_GP"));
+
+					retMap = wbsMakeGenTaskDao.selectTaskWbsDepthExists(mapDup);
+					map.put("DEPTH_GP", retMap.get("DEPTH_GP").toString());
+					
+					logger.debug("▶ [map.get(['DEPTH_GP'] " + map.get("DEPTH_GP").toString());
+
+					//----------------------------------------------------------------------------
+					logger.debug("▶ [신규인 경우 TASK_NO생성]");
+					//----------------------------------------------------------------------------
+					map.put("TASK_NO", paramMap.get("TASK_NO"));
+				}
+
+				//----------------------------------------------------------------------------
+				logger.debug("▶ [과제 기본조회]");
+				//----------------------------------------------------------------------------
+				Map<String, Object> mapTaskBaseInfo = projectProposalDao.selectTaskBaseInfo(map);
+				
+				map.put("COMM_GP"    , paramMap.get("COMM_GP"));
+				map.put("COMM_CD"    , map.get("CODE_DEPTH_GP"));
+
+				if ("".equals(map.get("DEPTH_NM"))) {
+					map.put("DEPTH_NM"   , commonDao.selectCommCd(map).get("COMM_NM").toString());
+				}
+				
+				map.put("DEPT_CD"    , mapTaskBaseInfo.get("SUPER_DEPT_CD").toString());
+				map.put("CHARGER_ID" , mapTaskBaseInfo.get("TASK_PL_EMPNO").toString());
+				map.put("REG_ID"     , paramMap.get("USER_ID"));
+				map.put("REG_PGM"    , paramMap.get("APP_ID"));
+				map.put("MOD_ID"     , paramMap.get("USER_ID"));
+				map.put("MOD_PGM"    , paramMap.get("APP_ID"));
+				
+				//----------------------------------------------------------------------------
+				logger.debug("▶ [과제 WBS 단계 저장]");
+				logger.debug("▶ [TASK_NO] "+ map.get("TASK_NO"));
+				logger.debug("▶ [DEPTH_GP] "+ map.get("DEPTH_GP"));
+				//----------------------------------------------------------------------------
+				wbsMakeGenTaskDao.upsertTaskWbsDepth(map);
+
+				//----------------------------------------------------------------------------
+				logger.debug("▶ [과제 WBS 항목 삭제]");
+				//----------------------------------------------------------------------------
+				wbsMakeGenTaskDao.deleteTaskWbsItem(map);
+
+				//----------------------------------------------------------------------------
+				logger.debug("▶ [과제 WBS항목 저장]");
+				//----------------------------------------------------------------------------
+				if (!"".equals(map.get("ITEM_CD"))) {
+					for (String itemCd : map.get("ITEM_CD").split(",")) {
+						//----------------------------------------------------------------------------
+						logger.debug("▶ [COMM_CD] " + itemCd);
+						logger.debug("▶ [COMM_GP] ITEM_CD");
+						logger.debug("▶ [TASK_NO]" + map.get("TASK_NO"));
+						logger.debug("▶ [DEPTH_GP]" + map.get("DEPTH_GP"));
+						logger.debug("▶ [CODE_DEPTH_GP]" + map.get("CODE_DEPTH_GP"));
+						//----------------------------------------------------------------------------
+						map.put("COMM_GP", dmItemCd.get("COMM_GP"));
+						map.put("COMM_CD", itemCd);
+						map.put("ITEM_CD", itemCd);
+						if (!"".equals(map.get("COMM_GP")) && !"".equals(map.get("COMM_CD"))) {
+							Map<String, Object> mapSelectCommCd = commonDao.selectCommCd(map);
+							if (mapSelectCommCd != null && !mapSelectCommCd.isEmpty()) {
+								map.put("ITEM_NM", mapSelectCommCd.get("COMM_NM").toString());
+							}
+						}
+						
+						//----------------------------------------------------------------------------
+						logger.debug("▶ [ESSENTIAL_YN]");
+						//----------------------------------------------------------------------------
+						Map<String, Object> mapEss = wbsMakeGenTaskDao.selectTaskWbsItemEssentialYn(map);
+
+						//----------------------------------------------------------------------------
+						logger.debug("▶ [mapEss.size()] " + mapEss.size());
+						//----------------------------------------------------------------------------
+						if (mapEss.size() > 0) {
+							Object value = mapEss.get("ESSENTIAL_YN");
+							map.put("ESSENTIAL_YN" , (value == null ? "" : value.toString()) );
+						}
+						
+						wbsMakeGenTaskDao.upsertTaskWbsItem(map);
+					}
+				}
+			}
+		}
+		
+		//--[add 2023-11-30]--------------------------------------------------------------------------
+		// logger.debug("▶ [과제 WBS 생성요청]");
+		//----------------------------------------------------------------------------
+		if ("APPR".equals(paramMap.get("SEPARATOR"))) {
+			paramMap = approveTaskInfo(dataRequest);
+		}
+
+		paramMap.put("RESULT_CD", "SUCC");
+		return paramMap;
+	}
+	
+	@Override
+	public Map<String, String> saveTaskWbsInfoNew(DataRequest dataRequest) throws Exception {
+		
+		List<Map<String, String>> dsList = dataRequest.getParameterGroup("dsListItemSave").getAllRowList();
+		List<Map<String, String>> dsListDepth = dataRequest.getParameterGroup("dsListDepthSave").getAllRowList();
+		Map<String, String> paramMap = dataRequest.getParameterGroup("dmParam").getSingleValueMap();
+		Map<String, String> dmItemCd = dataRequest.getParameterGroup("dmItemCd").getSingleValueMap();
+		
+		paramMap.put("REG_ID"    , paramMap.get("USER_ID"));
+		paramMap.put("REG_PGM"	 , paramMap.get("APP_ID"));
+		paramMap.put("MOD_ID" 	 , paramMap.get("USER_ID"));
+		paramMap.put("MOD_PGM"	 , paramMap.get("APP_ID"));
+		
+		//----------------------------------------------------------------------------
+		logger.debug("▶ [과제 WBS 공통(검토) 생성]");
+		//----------------------------------------------------------------------------
+		wbsMakeGenTaskDao.insertTaskWbsNew(paramMap);
+		
+		//----------------------------------------------------------------------------
+		logger.debug("▶ [과제 WBS 단계 생성]");
+		//----------------------------------------------------------------------------
+		if (dsList.size() > 0) {
+			//----------------------------------------------------------------------------
+			logger.debug("▶ [과제 WBS항목 저장]");
+			//----------------------------------------------------------------------------
+			for (Map<String, String> map : dsList) {
+				if (!"".equals(map.get("ITEM_CD"))) {
+					if ("".equals(map.get("TASK_NO"))) {
+						//----------------------------------------------------------------------------
+						logger.debug("▶ [신규인 경우 TASK_NO생성]");
+						//----------------------------------------------------------------------------
+						map.put("TASK_NO", paramMap.get("TASK_NO"));
+					}
+	
+					logger.debug("▶ [TASK_NO]" + map.get("TASK_NO"));
+					logger.debug("▶ [DEPTH_GP]" + map.get("DEPTH_GP"));
+					logger.debug("▶ [CODE_DEPTH_GP]" + map.get("CODE_DEPTH_GP"));
+					//----------------------------------------------------------------------------
+					logger.debug("▶ [ESSENTIAL_YN]");
+					//----------------------------------------------------------------------------
+					Map<String, Object> mapEss = wbsMakeGenTaskDao.selectTaskWbsItemEssentialYn(map);
+	
+					//----------------------------------------------------------------------------
+					logger.debug("▶ [mapEss.size()] " + mapEss.size());
+					//----------------------------------------------------------------------------
+					if (mapEss.size() > 0) {
+						Object value = mapEss.get("ESSENTIAL_YN");
+						map.put("ESSENTIAL_YN" , (value == null ? "" : value.toString()) );
+					}
+					map.put("REG_ID" , paramMap.get("USER_ID"));
+					map.put("REG_PGM", paramMap.get("APP_ID"));
+					map.put("MOD_ID" , paramMap.get("USER_ID"));
+					map.put("MOD_PGM", paramMap.get("APP_ID"));
+					
+					wbsMakeGenTaskDao.upsertTaskWbsItemNew(map);
+					
+					//----------------------------------------------------------------------------
+					logger.debug("▶ [과제 WBS 참여 인원 저장]");
+					//----------------------------------------------------------------------------
+					if (!"".equals(map.get("ATT_USER_ID"))) {
+						wbsMakeGenTaskDao.deleteTaskWbsAttNew(map);
+						for (String userId : map.get("ATT_USER_ID").split(",")) {
+							map.put("ATT_USER_ID", userId.replaceAll(" ", ""));
+							wbsMakeGenTaskDao.insertTaskWbsAttNew(map);
+						}
+					}
+				}
+			}
+		}
+		
+		wbsMakeGenTaskDao.deleteTaskWbsDepthNew(paramMap);
+		if (dsListDepth.size() > 0) {
+			for (Map<String, String> mapDepth : dsListDepth) {
+				if ("".equals(mapDepth.get("TASK_NO"))) {
+					//----------------------------------------------------------------------------
+					logger.debug("▶ [신규인 경우 TASK_NO생성]");
+					//----------------------------------------------------------------------------
+					mapDepth.put("TASK_NO", paramMap.get("TASK_NO"));
+				}
+
+				//----------------------------------------------------------------------------
+				logger.debug("▶ [과제 기본조회]");
+				//----------------------------------------------------------------------------
+				Map<String, Object> mapTaskBaseInfo = projectProposalDao.selectTaskBaseInfo(mapDepth);
+				
+				mapDepth.put("COMM_GP", dmItemCd.get("COMM_GP"));
+				mapDepth.put("COMM_CD", mapDepth.get("DEPTH_GP"));
+				if ("".equals(mapDepth.get("DEPTH_NM"))) {
+					mapDepth.put("DEPTH_NM"   , commonDao.selectCommCd(mapDepth).get("COMM_NM").toString());
+				}
+				
+				mapDepth.put("DEPT_CD"    , mapTaskBaseInfo.get("SUPER_DEPT_CD").toString());
+				mapDepth.put("CHARGER_ID" , mapTaskBaseInfo.get("TASK_PL_EMPNO").toString());
+				mapDepth.put("REG_ID"     , paramMap.get("USER_ID"));
+				mapDepth.put("REG_PGM"    , paramMap.get("APP_ID"));
+				mapDepth.put("MOD_ID"     , paramMap.get("USER_ID"));
+				mapDepth.put("MOD_PGM"    , paramMap.get("APP_ID"));
+				
+				//----------------------------------------------------------------------------
+				logger.debug("▶ [과제 WBS 단계 저장]");
+				logger.debug("▶ [TASK_NO] "+ mapDepth.get("TASK_NO"));
+				logger.debug("▶ [DEPTH_GP] "+ mapDepth.get("DEPTH_GP"));
+				logger.debug("▶ [REG_ID] "+ mapDepth.get("REG_ID"));
+				logger.debug("▶ [REG_PGM] "+ mapDepth.get("REG_PGM"));
+				//----------------------------------------------------------------------------
+				wbsMakeGenTaskDao.insertTaskWbsDepthNew(mapDepth);
+			}
+		}
+		
+		//--[add 2023-11-30]--------------------------------------------------------------------------
+		// logger.debug("▶ [과제 WBS 생성요청]");
+		//----------------------------------------------------------------------------
+		if ("APPR".equals(paramMap.get("SEPARATOR"))) {
+			paramMap = approveTaskInfo(dataRequest);
+		}
+
+		paramMap.put("RESULT_CD", "SUCC");
+		return paramMap;
+	}
+	
+	/**
+	 * 과제 WBS 공통(검토) 저장
+	 */
+	public Map<String, String> insertTaskWbs(DataRequest dataRequest) throws Exception {
+		ParameterGroup dmParam = dataRequest.getParameterGroup("dmParam");
+		Map<String, String> paramMap = dmParam.getSingleValueMap();
+		
+		paramMap.put("REG_ID"    , paramMap.get("USER_ID"));
+		paramMap.put("REG_PGM"	 , paramMap.get("APP_ID"));
+		paramMap.put("MOD_ID" 	 , paramMap.get("USER_ID"));
+		paramMap.put("MOD_PGM"	 , paramMap.get("APP_ID"));
+
+		wbsMakeGenTaskDao.insertTaskWbs(paramMap);
+		
+		paramMap.put("RESULT_CD", "SUCC");
+
+		return paramMap;
+	}
+	
+	/**
+	 * 과제 WBS 단계 저장
+	 */
+	public Map<String, String> upsertTaskWbsDepth(DataRequest dataRequest) throws Exception {
+		List<Map<String, String>> dsList = dataRequest.getParameterGroup("dsListSave").getAllRowList();
+		ParameterGroup dmParam = dataRequest.getParameterGroup("dmParam");
+		Map<String, String> paramMap = dmParam.getSingleValueMap();
+
+		//----------------------------------------------------------------------------
+		logger.debug("▶ [과제 WBS 단계]" + dsList.size());
+		//----------------------------------------------------------------------------
+		int iCount = 0;
+
+		if (dsList.size() > 0) {
+			for (Map<String, String> map : dsList) {
+
+				if ("".equals(map.get("TASK_NO"))) {
+					Map<String, String> mapDup = new HashMap<String, String>();
+					mapDup.put("TASK_NO", paramMap.get("TASK_NO"));
+					mapDup.put("CODE_DEPTH_GP", map.get("CODE_DEPTH_GP"));
+					
+					//----------------------------------------------------------------------------
+					logger.debug("▶ [과제 WBS 단계]단계중복체크");
+					//----------------------------------------------------------------------------
+					Map<String, Object> retMap = wbsMakeGenTaskDao.selectTaskWbsDepthExists(mapDup);
+
+					map.put("DEPTH_GP", retMap.get("DEPTH_GP").toString());
+					logger.debug("▶ [map.get(['DEPTH_GP'] " + map.get("DEPTH_GP").toString());
+
+					//----------------------------------------------------------------------------
+					logger.debug("▶ [신규인 경우 TASK_NO생성]");
+					//----------------------------------------------------------------------------
+					map.put("TASK_NO", paramMap.get("TASK_NO"));
+				}
+
+				//----------------------------------------------------------------------------
+				logger.debug("▶ [과제 기본조회]");
+				//----------------------------------------------------------------------------
+				Map<String, Object> mapTaskBaseInfo = projectProposalDao.selectTaskBaseInfo(map);
+				
+				map.put("COMM_GP"    , paramMap.get("COMM_GP"));
+				map.put("COMM_CD"    , map.get("CODE_DEPTH_GP"));
+
+				if ("".equals(map.get("DEPTH_NM"))) {
+					map.put("DEPTH_NM"   , commonDao.selectCommCd(map).get("COMM_NM").toString());
+				}
+				
+				map.put("DEPT_CD"    , mapTaskBaseInfo.get("SUPER_DEPT_CD").toString());
+				map.put("CHARGER_ID" , mapTaskBaseInfo.get("TASK_PL_EMPNO").toString());
+				map.put("REG_ID"     , paramMap.get("USER_ID"));
+				map.put("REG_PGM"    , paramMap.get("APP_ID"));
+				map.put("MOD_ID"     , paramMap.get("USER_ID"));
+				map.put("MOD_PGM"    , paramMap.get("APP_ID"));
+
+				wbsMakeGenTaskDao.upsertTaskWbsDepth(map);
+				iCount++;
+			}
+		}
+		//----------------------------------------------------------------------------
+		logger.debug("▶ [과제 WBS 단계: " + iCount + " / " + dsList.size() + " 건 저장]");
+		//----------------------------------------------------------------------------
+		paramMap.put("RESULT_CD", "SUCC");
+		
+		return paramMap;
+	}
+	
+	/**
+	 * 과제 WBS 항목 저장
+	 */
+	public Map<String, String> upsertTaskWbsItem(DataRequest dataRequest) throws Exception {
+		Map<String, String> paramMap = dataRequest.getParameterGroup("dmParam").getSingleValueMap();
+		List<Map<String, String>> dsList = dataRequest.getParameterGroup("dsListSave").getAllRowList();
+
+		int iCount = 0;
+		//----------------------------------------------------------------------------
+		logger.debug("▶ [과제 WBS 항목]" + dsList.size());
+		//----------------------------------------------------------------------------
+		if (dsList.size() > 0) {
+			for (Map<String, String> map : dsList) {
+				
+				if ("".equals(map.get("DEPTH_GP"))) {
+					Map<String, String> mapDup = new HashMap<String, String>();
+					mapDup.put("TASK_NO", paramMap.get("TASK_NO"));
+					mapDup.put("CODE_DEPTH_GP", map.get("CODE_DEPTH_GP"));
+					Map<String, Object> retMap = wbsMakeGenTaskDao.selectMaxTaskWbsDepth(mapDup);
+					map.put("DEPTH_GP", retMap.get("DEPTH_GP").toString());
+				}
+				
+				if (!"".equals(map.get("ITEM_CD"))) {
+					for (String itemCd : map.get("ITEM_CD").split(",")) {
+						if ("".equals(map.get("TASK_NO"))) {
+							map.put("TASK_NO", paramMap.get("TASK_NO"));
+						}
+
+						//----------------------------------------------------------------------------
+						logger.debug("▶ [COMM_CD]" + itemCd);
+						logger.debug("▶ [COMM_GP]" + map.get("COMM_GP"));
+						logger.debug("▶ [TASK_NO]" + map.get("TASK_NO"));
+						logger.debug("▶ [DEPTH_GP]" + map.get("DEPTH_GP"));
+						logger.debug("▶ [CODE_DEPTH_GP]" + map.get("CODE_DEPTH_GP"));
+						//----------------------------------------------------------------------------
+						map.put("COMM_CD", itemCd);
+						map.put("ITEM_CD", itemCd);
+						if (!"".equals(map.get("COMM_GP")) && !"".equals(map.get("ITEM_CD"))) {
+							map.put("ITEM_NM", commonDao.selectCommCd(map).get("COMM_NM").toString());
+						}
+						
+						//----------------------------------------------------------------------------
+						logger.debug("▶ [ESSENTIAL_YN]");
+						//----------------------------------------------------------------------------
+						Map<String, Object> mapEss = wbsMakeGenTaskDao.selectTaskWbsItemEssentialYn(map);
+
+						//----------------------------------------------------------------------------
+						logger.debug("▶ [mapEss.size()] " + mapEss.size());
+						//----------------------------------------------------------------------------
+						if (mapEss.size() > 0) {
+							Object value = mapEss.get("ESSENTIAL_YN");
+							map.put("ESSENTIAL_YN" , (value == null ? "" : value.toString()) );
+						}
+						map.put("REG_ID" , paramMap.get("USER_ID"));
+						map.put("REG_PGM", paramMap.get("APP_ID"));
+						map.put("MOD_ID" , paramMap.get("USER_ID"));
+						map.put("MOD_PGM", paramMap.get("APP_ID"));
+						
+						wbsMakeGenTaskDao.upsertTaskWbsItem(map);
+						iCount++;
+					}
+				}
+			}
+		}
+		
+		//----------------------------------------------------------------------------
+		logger.debug("▶ [과제 WBS 항목: " + iCount + " / " + dsList.size() + " 건 저장]");
+		//----------------------------------------------------------------------------
+		paramMap.put("RESULT_CD", "SUCC");
+		return paramMap;
+	}
+
+	/**
+	 * 과제 WBS 단계 / 항목 삭제
+	 */
+	@Override
+	public Map<String, String> deleteTaskWbsDepthInfo(DataRequest dataRequest) throws Exception {
+		
+		//----------------------------------------------------------------------------
+		logger.debug("▶ [과제 WBS 단계 삭제]");
+		//----------------------------------------------------------------------------
+		Map<String, String> paramMap = deleteTaskWbsDepth(dataRequest);
+		
+		if (!"SUCC".equals(paramMap.get("RESULT_CD"))) {
+			return paramMap;
+		}
+
+		//----------------------------------------------------------------------------
+		logger.debug("▶ [과제 WBS 단계 항목삭제]");
+		//----------------------------------------------------------------------------
+		paramMap = deleteTaskWbsItem(dataRequest);
+		
+		if (!"SUCC".equals(paramMap.get("RESULT_CD"))) {
+			return paramMap;
+		}
+
+		paramMap.put("RESULT_CD", "SUCC");
+		return paramMap;
+	}
+
+	/**
+	 * 과제 WBS 단계 UPSERT/ 항목 및 참여인원 삭제(NEW)
+	 */
+	@Override
+	public Map<String, String> deleteTaskWbsDepthInfoNew(DataRequest dataRequest) throws Exception {
+		//----------------------------------------------------------------------------
+		logger.debug("▶ [과제 WBS 단계 항목삭제]");
+		//----------------------------------------------------------------------------
+		Map<String, String> paramMap = deleteTaskWbsItemNew(dataRequest);
+		
+		if (!"SUCC".equals(paramMap.get("RESULT_CD"))) {
+			return paramMap;
+		}
+
+		paramMap.put("RESULT_CD", "SUCC");
+		return paramMap;
+	}
+
+	/**
+	 * 과제 WBS 단계 삭제
+	 */
+	@Override
+	public Map<String, String> deleteTaskWbsDepth(DataRequest dataRequest) throws Exception {
+		Map<String, String> paramMap = new HashMap<String, String>();
+		List<Map<String, String>> dsList = dataRequest.getParameterGroup("dsListSave").getAllRowList();
+		
+		int iCount = 0;
+		//----------------------------------------------------------------------------
+		logger.debug("▶ [과제 WBS 단계]" + dsList.size());
+		//----------------------------------------------------------------------------
+		if (dsList.size() > 0) {
+			for (Map<String, String> map : dsList) {
+				if (!"N".equals( map.get("DEL_YN"))) {
+					wbsMakeGenTaskDao.deleteTaskWbsDepth(map);
+					iCount++;
+				}
+			}
+		}
+		//----------------------------------------------------------------------------
+		logger.debug("▶ [과제 WBS 단계: " + iCount + " / " + dsList.size() + " 건 삭제]");
+		//----------------------------------------------------------------------------
+		paramMap.put("RESULT_CD", "SUCC");
+		return paramMap;
+	}
+	
+	/**
+	 * 과제 WBS 항목 삭제
+	 * @param dataRequest
+	 * @return
+	 * @throws Exception
+	 */
+	public Map<String, String> deleteTaskWbsItem(DataRequest dataRequest) throws Exception {
+		Map<String, String> paramMap = new HashMap<String, String>();
+		List<Map<String, String>> dsList = dataRequest.getParameterGroup("dsListSave").getAllRowList();
+		
+		int iCount = 0;
+		//----------------------------------------------------------------------------
+		logger.debug("▶ [과제 WBS 항목]" + dsList.size());
+		//----------------------------------------------------------------------------
+		if (dsList.size() > 0) {
+			for (Map<String, String> map : dsList) {
+				if ("".equals(map.get("DEPTH_GP"))) {
+					map.put("DEPTH_GP", map.get("CODE_DEPTH_GP"));
+				}
+				wbsMakeGenTaskDao.deleteTaskWbsItem(map);
+				iCount++;
+			}
+		}
+		
+		//----------------------------------------------------------------------------
+		logger.debug("▶ [과제 WBS 항목: " + iCount + " / " + dsList.size() + " 건 삭제]");
+		//----------------------------------------------------------------------------
+		paramMap.put("RESULT_CD", "SUCC");
+		return paramMap;
+	}
+
+	/**
+	 * 과제 WBS 항목 삭제(New)
+	 * @param dataRequest
+	 * @return
+	 * @throws Exception
+	 */
+	public Map<String, String> deleteTaskWbsItemNew(DataRequest dataRequest) throws Exception {
+		Map<String, String> paramMap = new HashMap<String, String>();
+		Map<String, String> dmParam = dataRequest.getParameterGroup("dmParam").getSingleValueMap();
+		List<Map<String, String>> dsList = dataRequest.getParameterGroup("dsListItemSave").getAllRowList();
+		List<Map<String, String>> dsListDepth = dataRequest.getParameterGroup("dsListDepthSave").getAllRowList();
+		
+		int iCount = 0;
+		//----------------------------------------------------------------------------
+		logger.debug("▶ [과제 WBS 항목]" + dsList.size());
+		//----------------------------------------------------------------------------
+		if (dsList.size() > 0) {
+			for (Map<String, String> map : dsList) {
+				wbsMakeGenTaskDao.deleteTaskWbsItemNew(map);
+				wbsMakeGenTaskDao.deleteTaskWbsAttNew(map);
+				iCount++;
+			}
+		}
+		
+		wbsMakeGenTaskDao.deleteTaskWbsDepthNew(dmParam);
+		if (dsListDepth.size() > 0) {
+			for (Map<String, String> mapDepth : dsListDepth) {
+				mapDepth.put("REG_ID"     , dmParam.get("USER_ID"));
+				mapDepth.put("REG_PGM"    , dmParam.get("APP_ID"));
+				mapDepth.put("MOD_ID"     , dmParam.get("USER_ID"));
+				mapDepth.put("MOD_PGM"    , dmParam.get("APP_ID"));
+				
+				//----------------------------------------------------------------------------
+				logger.debug("▶ [과제 WBS 단계 저장]");
+				logger.debug("▶ [TASK_NO] "+ mapDepth.get("TASK_NO"));
+				logger.debug("▶ [DEPTH_GP] "+ mapDepth.get("DEPTH_GP"));
+				//----------------------------------------------------------------------------
+				wbsMakeGenTaskDao.insertTaskWbsDepthNew(mapDepth);
+			}
+		}
+		
+		//----------------------------------------------------------------------------
+		logger.debug("▶ [과제 WBS 항목: " + iCount + " / " + dsList.size() + " 건 삭제]");
+		//----------------------------------------------------------------------------
+		paramMap.put("RESULT_CD", "SUCC");
+		return paramMap;
+	}
+
+	@Override
+	public List<Map<String, Object>> selectTaskWbsDepth(Map<String, String> paramMap) throws Exception {
+		// TODO Auto-generated method stub
+		return wbsMakeGenTaskDao.selectTaskWbsDepth(paramMap);
+	}
+
+	/**
+	 * 과제 WBS 단계(퀵과제) 생성
+	 */
+	@Override
+	public Map<String, String> saveQukTaskDepth(DataRequest dataRequest) throws Exception {
+		Map<String, String> dmParam = dataRequest.getParameterGroup("dmParam").getSingleValueMap();
+		Map<String, String> paramMap = new HashMap<String, String>();
+
+		//----------------------------------------------------------------------------
+		logger.debug("▶ [과제 WBS 공통(검토) 생성]");
+		//----------------------------------------------------------------------------
+		paramMap = insertTaskWbs(dataRequest);
+
+		if (!"SUCC".equals(paramMap.get("RESULT_CD"))) {
+			paramMap.put("RESULT_CD", "FAIL");
+			return paramMap;
+		}
+
+		//----------------------------------------------------------------------------
+		logger.debug("▶ [과제 WBS 단계 생성]퀵과제");
+		//----------------------------------------------------------------------------
+		paramMap = upsertQukTaskWbsDepth(dataRequest);
+		
+		if (!"SUCC".equals(paramMap.get("RESULT_CD"))) {
+			return paramMap;
+		}
+
+		//--[add 2023-11-30]--------------------------------------------------------------------------
+		// logger.debug("▶ [과제 WBS 생성요청]");
+		//----------------------------------------------------------------------------
+		if ("APPR".equals(dmParam.get("SEPARATOR"))) {
+			paramMap = approveTaskInfo(dataRequest);
+		}
+		
+		paramMap.put("RESULT_CD", "SUCC");
+
+		return paramMap;
+	}
+	
+	/**
+	 * 퀵과제저장
+	 * @param dataRequest
+	 * @return
+	 * @throws Exception
+	 */
+	public Map<String, String> upsertQukTaskWbsDepth(DataRequest dataRequest) throws Exception {
+		ParameterGroup dmParam = dataRequest.getParameterGroup("dmParam");
+		List<Map<String, String>> dsList = dataRequest.getParameterGroup("dsListSave").getAllRowList();
+		Map<String, String> paramMap = dmParam.getSingleValueMap();
+
+		int iCount = 0;
+		//----------------------------------------------------------------------------
+		logger.debug("▶ [퀵과제]" + dsList.size());
+		//----------------------------------------------------------------------------
+		if (dsList.size() > 0) {
+			for (Map<String, String> map : dsList) {
+				//----------------------------------------------------------------------------
+				logger.debug("▶ [신규인 경우 TASK_NO생성]");
+				//----------------------------------------------------------------------------
+				if ("".equals(map.get("TASK_NO"))) {
+					map.put("TASK_NO", paramMap.get("TASK_NO"));
+				}
+				
+				//----------------------------------------------------------------------------
+				logger.debug("▶ [신규인 경우 과제단계생성]");
+				//----------------------------------------------------------------------------
+				if ("".equals(map.get("DEPTH_GP"))) {
+					map.put("DEPTH_GP", wbsMakeGenTaskDao.selectMaxDepthGp(map).get("DEPTH_GP").toString());
+				}
+
+				//----------------------------------------------------------------------------
+				logger.debug("▶ [담당자정보]" + map.get("CHARGER_ID"));
+				//----------------------------------------------------------------------------
+				if ("".equals(map.get("CHARGER_ID"))) {
+					map.put("userId", paramMap.get("USER_ID"));
+					map.put("DEPT_CD", userInfoDao.selectUserInfoItem(map).get("DEPT_CD").toString());
+					map.put("CHARGER_ID", paramMap.get("USER_ID"));
+				}
+				map.put("REG_ID"     , paramMap.get("USER_ID"));
+				map.put("REG_PGM"    , paramMap.get("APP_ID"));
+				map.put("MOD_ID"     , paramMap.get("USER_ID"));
+				map.put("MOD_PGM"    , paramMap.get("APP_ID"));
+
+				wbsMakeGenTaskDao.upsertTaskWbsDepth(map);
+				iCount++;
+			}
+		}
+		
+		//----------------------------------------------------------------------------
+		logger.debug("▶ [과제 WBS 단계(퀵과제): " + iCount + " / " + dsList.size() + " 건 저장]");
+		//----------------------------------------------------------------------------
+		paramMap.put("RESULT_CD", "SUCC");
+		return paramMap;
+	}
+
+	/**
+	 * 과제 WBS 단계 저장(위탁,국책,기술,공통)
+	 * @param dataRequest
+	 * @return
+	 * @throws Exception
+	 */
+	@Override
+	public Map<String, String> saveCommTaskDepth(DataRequest dataRequest) throws Exception {
+		List<Map<String, String>> dsList = dataRequest.getParameterGroup("dsListSave").getAllRowList();
+		Map<String, String> paramMap = dataRequest.getParameterGroup("dmParam").getSingleValueMap();
+		Map<String, String> mapDup = new HashMap<>();
+		Map<String, Object> retMap = new HashMap<>();
+
+		paramMap.put("REG_ID"    , paramMap.get("USER_ID"));
+		paramMap.put("REG_PGM"	 , paramMap.get("APP_ID"));
+		paramMap.put("MOD_ID" 	 , paramMap.get("USER_ID"));
+		paramMap.put("MOD_PGM"	 , paramMap.get("APP_ID"));
+		
+		//----------------------------------------------------------------------------
+		logger.debug("▶ [과제 WBS 공통(검토) 생성]");
+		//----------------------------------------------------------------------------
+		wbsMakeGenTaskDao.insertTaskWbs(paramMap);
+		
+		//----------------------------------------------------------------------------
+		logger.debug("▶ [과제 WBS 단계 생성]");
+		//----------------------------------------------------------------------------
+		if (dsList.size() > 0) {
+			for(Map<String, String> map : dsList) {
+				if ("".equals(map.get("TASK_NO"))) {
+					mapDup.put("TASK_NO", paramMap.get("TASK_NO"));
+					mapDup.put("CODE_DEPTH_GP", map.get("CODE_DEPTH_GP"));
+
+					retMap = wbsMakeGenTaskDao.selectTaskWbsDepthExists(mapDup);
+					map.put("DEPTH_GP", retMap.get("DEPTH_GP").toString());
+					
+					logger.debug("▶ [map.get(['DEPTH_GP'] " + map.get("DEPTH_GP").toString());
+
+					//----------------------------------------------------------------------------
+					logger.debug("▶ [신규인 경우 TASK_NO생성]");
+					//----------------------------------------------------------------------------
+					map.put("TASK_NO", paramMap.get("TASK_NO"));
+				}
+
+				//----------------------------------------------------------------------------
+				logger.debug("▶ [과제 단계명이 없는 경우 명칭생성(코드값)]");
+				//----------------------------------------------------------------------------
+				if ("".equals(map.get("DEPTH_NM"))) {
+					map.put("COMM_GP", paramMap.get("COMM_GP"));
+					map.put("COMM_CD", map.get("CODE_DEPTH_GP"));
+					
+					logger.debug("▶ [COMM_GP] " + map.get("COMM_GP"));
+					logger.debug("▶ [COMM_CD] " + map.get("COMM_CD"));
+					
+					if (!"".equals(map.get("COMM_GP")) && !"".equals(map.get("COMM_CD"))) {
+						map.put("DEPTH_NM", commonDao.selectCommCd(map).get("COMM_NM").toString());
+					}
+				}
+				
+				//----------------------------------------------------------------------------
+				logger.debug("▶ [담당자정보]");
+				//----------------------------------------------------------------------------
+				if (!"".equals(map.get("CHARGER_ID"))) {
+					map.put("userId", map.get("CHARGER_ID"));
+					map.put("DEPT_CD", userInfoDao.selectUserInfoItem(map).get("DEPT_CD").toString());
+				}
+				map.put("REG_ID"     , paramMap.get("USER_ID"));
+				map.put("REG_PGM"    , paramMap.get("APP_ID"));
+				map.put("MOD_ID"     , paramMap.get("USER_ID"));
+				map.put("MOD_PGM"    , paramMap.get("APP_ID"));
+
+				wbsMakeGenTaskDao.upsertTaskWbsDepth(map);
+			}
+		}
+
+		//--[add 2023-11-30]--------------------------------------------------------------------------
+		// logger.debug("▶ [과제 WBS 생성요청]");
+		//----------------------------------------------------------------------------
+		if ("APPR".equals(paramMap.get("SEPARATOR"))) {
+			paramMap = approveTaskInfo(dataRequest);
+		}
+
+		paramMap.put("RESULT_CD", "SUCC");
+		return paramMap;
+
+/*
+		int iCount = 0;
+		//----------------------------------------------------------------------------
+		logger.debug("▶ [과제유형: " + paramMap.get("TASK_TYPE") + "]"+ dsList.size());
+		//----------------------------------------------------------------------------
+		if (dsList.size() > 0) {
+			for (Map<String, String> map : dsList) {
+				
+				//----------------------------------------------------------------------------
+				logger.debug("▶ [과제 WBS 단계]단계중복체크");
+				//----------------------------------------------------------------------------
+				if ("".equals(map.get("TASK_NO"))) {
+					Map<String, String> mapDup= new HashMap<String, String>();
+					mapDup.put("TASK_NO", paramMap.get("TASK_NO"));
+					mapDup.put("DEPTH_GP", map.get("DEPTH_GP"));
+					
+					int listSize = wbsMakeGenTaskDao.selectTaskWbsDepthExists(mapDup).size();
+					//----------------------------------------------------------------------------
+					logger.debug("▶ [과제 WBS 단계] " + listSize + "건 존재");
+					//----------------------------------------------------------------------------
+					
+					if (listSize > 0) {
+						paramMap.put("RESULT_CD", "FAIL");
+						paramMap.put("RESULT_MSG", mapDup.get("DEPTH_GP") + " 단계가 존재합니다.");
+						return paramMap;
+					}
+
+					//----------------------------------------------------------------------------
+					logger.debug("▶ [신규인 경우 TASK_NO생성]");
+					//----------------------------------------------------------------------------
+					map.put("TASK_NO", paramMap.get("TASK_NO"));
+				}
+				
+				//----------------------------------------------------------------------------
+				logger.debug("▶ [과제 단계명이 없는 경우 명칭생성(코드값)]");
+				//----------------------------------------------------------------------------
+				map.put("COMM_GP"    , paramMap.get("COMM_GP"));
+				map.put("COMM_CD"    , map.get("DEPTH_GP"));
+				
+				//----------------------------------------------------------------------------
+				logger.debug("▶ [과제 단계명이 없는 경우 명칭생성(코드값)]");
+				//----------------------------------------------------------------------------
+				logger.debug("▶ [map.get('COMM_GP')] " + map.get("COMM_GP"));
+				logger.debug("▶ [map.get('COMM_CD')] " + map.get("COMM_CD"));
+				
+				if (!"".equals(map.get("COMM_GP")) && !"".equals(map.get("COMM_CD"))) {
+					map.put("DEPTH_NM"   , commonDao.selectCommCd(map).get("COMM_NM").toString());
+				}
+				
+				//----------------------------------------------------------------------------
+				logger.debug("▶ [담당자정보]");
+				//----------------------------------------------------------------------------
+				if (!"".equals(map.get("CHARGER_ID"))) {
+					map.put("userId", map.get("CHARGER_ID"));
+					map.put("DEPT_CD", userInfoDao.selectUserInfoItem(map).get("DEPT_CD").toString());
+				}
+				map.put("REG_ID"     , paramMap.get("USER_ID"));
+				map.put("REG_PGM"    , paramMap.get("APP_ID"));
+				map.put("MOD_ID"     , paramMap.get("USER_ID"));
+				map.put("MOD_PGM"    , paramMap.get("APP_ID"));
+
+				wbsMakeGenTaskDao.upsertTaskWbsDepth(map);
+				iCount++;
+			}
+		}
+		
+		//----------------------------------------------------------------------------
+		logger.debug("▶ [과제 WBS 단계(퀵과제): " + iCount + " / " + dsList.size() + " 건 저장]");
+		//----------------------------------------------------------------------------
+		paramMap.put("RESULT_CD", "SUCC");
+		return paramMap;
+*/
+	}
+
+	@Override
+	public Map<String, String> approveTaskInfo(DataRequest dataRequest) throws Exception {
+		ParameterGroup dmParam = dataRequest.getParameterGroup("dmParam");
+		Map<String, String> paramMap = dmParam.getSingleValueMap();
+
+		paramMap.put("MOD_ID"     , paramMap.get("USER_ID"));
+		paramMap.put("MOD_PGM"    , paramMap.get("APP_ID"));
+
+		//----------------------------------------------------------------------------
+		logger.debug("▶ [과제 WBS 생성요청 저장]");
+		//----------------------------------------------------------------------------
+		wbsMakeGenTaskDao.updateTaskWbs(paramMap);
+		
+		//----------------------------------------------------------------------------
+		logger.debug("▶ [과제 기본상태 저장]");
+		//----------------------------------------------------------------------------
+		wbsMakeGenTaskDao.updateTaskBaseInfoFields(paramMap);
+		
+		// Mail Send - 장임용 추가
+		paramMap.put("P_PROC_GP", "A4PL,B");
+		commonDao.callSP_MAIL_SEND_PROC(paramMap);
+		
+		paramMap.put("RESULT_CD", "SUCC");
+		return paramMap;
+	}
+
+	@Override
+	public List<Map<String, Object>> selectGatePMO(Map<String, String> paramMap) throws Exception {
+		return wbsMakeGenTaskDao.selectGatePMO(paramMap);
+	}
+
+	@Override
+	public List<Map<String, Object>> selectGateTL(Map<String, String> paramMap) throws Exception {
+		return wbsMakeGenTaskDao.selectGateTL(paramMap);
+	}
+
+	@Override
+	public List<Map<String, Object>> selectTaskBaseInfoHeader(Map<String, String> paramMap) throws Exception {
+		// TODO Auto-generated method stub
+		return wbsMakeGenTaskDao.selectTaskBaseInfoHeader(paramMap);
+	}
+
+	@Override
+	public Map<String, String> saveGate(DataRequest dataRequest) throws Exception {
+		Map<String, String> paramMap  = dataRequest.getParameterGroup("dmParam").getSingleValueMap();
+		Map<String, String> paramGate  = dataRequest.getParameterGroup("dmGate").getSingleValueMap();
+		List<Map<String, String>> dsListSave = dataRequest.getParameterGroup("dsListSave").getAllRowList();
+		
+		paramMap.put("MOD_ID" , paramMap.get("USER_ID"));
+		paramMap.put("MOD_PGM", paramMap.get("APP_ID"));
+		paramGate.put("REG_ID" , paramMap.get("USER_ID"));
+		paramGate.put("REG_PGM", paramMap.get("APP_ID"));
+		paramGate.put("MOD_ID" , paramMap.get("USER_ID"));
+		paramGate.put("MOD_PGM", paramMap.get("APP_ID"));
+
+		//----------------------------------------------------------------------------
+		logger.debug("▶ [Gate설정 저장]");
+		//----------------------------------------------------------------------------
+		for (Map<String, String> map : dsListSave) {
+			map.put("MOD_ID" , paramMap.get("USER_ID"));
+			map.put("MOD_PGM", paramMap.get("APP_ID"));
+			
+			wbsMakeGenTaskDao.upsertTaskWbsDepth(map);
+		}
+		
+		//----------------------------------------------------------------------------
+		logger.debug("▶ [Gate설정 승인/반려]");
+		//----------------------------------------------------------------------------
+		if ("APPR".equals(paramMap.get("SAVE_TP"))) {
+			//----------------------------------------------------------------------------
+			logger.debug("▶ [과제 WBS 공통(검토)]");
+			//----------------------------------------------------------------------------
+			wbsMakeGenTaskDao.updateTaskWbs(paramGate);
+
+			//----------------------------------------------------------------------------
+			logger.debug("▶ [SELECT 결재차수]");
+			//----------------------------------------------------------------------------
+			String approvalStepNo = projectProposalListDao.selectApprovalStepNo(paramGate).get("APPROVAL_STEP_NO").toString();
+			paramGate.put("APPROVAL_STEP_NO", approvalStepNo);
+			
+			//----------------------------------------------------------------------------
+			logger.debug("▶ [UPSERT 과제결재]");
+			//----------------------------------------------------------------------------
+			projectProposalListDao.upsertTaskApproval(paramGate);
+		}
+
+		//----------------------------------------------------------------------------
+		logger.debug("▶ [과제 기본상태 저장]");
+		//----------------------------------------------------------------------------
+		paramGate.put("PROG_STAT", "B");
+		//----------------------------------------------------------------------------
+		
+		// Mail Send - 장임용 추가
+		if ("PMO".equals(paramGate.get("APPROVAL_GP"))) {
+			if ("C".equals(paramGate.get("APPROVAL_STAT"))) {
+				wbsMakeGenTaskDao.updateTaskBaseInfoFields(paramGate);
+				paramGate.put("P_PROC_GP", "A4PMO,C");
+				commonDao.callSP_MAIL_SEND_PROC(paramGate);
+			} else if ("E".equals(paramGate.get("APPROVAL_STAT"))) {
+				paramGate.put("P_PROC_GP", "A4PMO,E");
+				commonDao.callSP_MAIL_SEND_PROC(paramGate);
+			}
+		}
+		else if ("TL".equals(paramGate.get("APPROVAL_GP"))) {
+			wbsMakeGenTaskDao.updateTaskBaseInfoFields(paramGate);
+			if ("C".equals(paramGate.get("APPROVAL_STAT"))) {
+				paramGate.put("P_PROC_GP", "A4TL,C");
+				commonDao.callSP_MAIL_SEND_PROC(paramGate);
+			} else if ("E".equals(paramGate.get("APPROVAL_STAT"))) {
+				paramGate.put("P_PROC_GP", "A4TL,E");
+				commonDao.callSP_MAIL_SEND_PROC(paramGate);
+			}
+		}
+
+		paramMap.put("RESULT_CD", "SUCC");
+		return paramMap;
+	}
+
+	@Override
+	public List<Map<String, Object>> selectTaskWbsNatl(Map<String, String> paramMap) throws Exception {
+		return wbsMakeGenTaskDao.selectTaskWbsNatl(paramMap);
+	}
+
+	/**
+	 * 과제 WBS 단계 저장(국책)
+	 * @param dataRequest
+	 * @return
+	 * @throws Exception
+	 */
+	@Override
+	public Map<String, String> saveTaskWbsNatl(DataRequest dataRequest) throws Exception {
+		Map<String, String> paramMap = dataRequest.getParameterGroup("dmParam").getSingleValueMap();
+		List<Map<String, String>> dsList = dataRequest.getParameterGroup("dsListSave").getAllRowList();
+
+		paramMap.put("REG_ID"    , paramMap.get("USER_ID"));
+		paramMap.put("REG_PGM"	 , paramMap.get("APP_ID"));
+		paramMap.put("MOD_ID" 	 , paramMap.get("USER_ID"));
+		paramMap.put("MOD_PGM"	 , paramMap.get("APP_ID"));
+
+		//----------------------------------------------------------------------------
+		logger.debug("▶ [과제 WBS 공통(검토) 생성]");
+		//----------------------------------------------------------------------------
+		wbsMakeGenTaskDao.insertTaskWbs(paramMap);
+
+		int iCount = 0;
+		//----------------------------------------------------------------------------
+		logger.debug("▶ [과제유형: " + paramMap.get("TASK_TYPE") + "]"+ dsList.size());
+		//----------------------------------------------------------------------------
+		if (dsList.size() > 0) {
+			for (Map<String, String> map : dsList) {
+				
+				//----------------------------------------------------------------------------
+				logger.debug("▶ [과제 WBS 단계]단계중복체크");
+				//----------------------------------------------------------------------------
+				Map<String, String> mapDup= new HashMap<String, String>();
+				
+				if ("".equals(map.get("TASK_NO"))) {
+					mapDup.put("TASK_NO", paramMap.get("TASK_NO"));
+					map.put("TASK_NO", paramMap.get("TASK_NO"));
+				}
+				
+				mapDup.put("DEPTH_GP", map.get("DEPTH_GP"));
+				
+				int listSize = wbsMakeGenTaskDao.selectTaskWbsDepthNatlExists(mapDup).size();
+				//----------------------------------------------------------------------------
+				logger.debug("▶ [과제 WBS 단계] " + listSize + "건 존재");
+				//----------------------------------------------------------------------------
+				
+				if (listSize > 0) {
+					paramMap.put("RESULT_CD", "FAIL");
+					paramMap.put("RESULT_MSG", mapDup.get("DEPTH_GP").substring(0,2) + paramMap.get("CD_MNNG") + " 데이터가 존재합니다.");
+					return paramMap;
+				}
+
+				//----------------------------------------------------------------------------
+				logger.debug("▶ [과제 단계명이 없는 경우 명칭생성(코드값)]");
+				//----------------------------------------------------------------------------
+				map.put("COMM_GP"    , paramMap.get("COMM_GP"));
+				map.put("COMM_CD"    , map.get("DEPTH_GP").substring(2));
+				
+				logger.debug("▶ [map.get('COMM_GP')] " + map.get("COMM_GP"));
+				logger.debug("▶ [map.get('COMM_CD')] " + map.get("COMM_CD"));
+				
+				if (!"".equals(map.get("COMM_GP")) && !"".equals(map.get("COMM_CD"))) {
+					map.put("DEPTH_NM", map.get("DEPTH_GP").substring(0,2) + paramMap.get("CD_MNNG") + " " + commonDao.selectCommCd(map).get("COMM_NM").toString());
+				}
+				
+				map.put("REG_ID"     , paramMap.get("USER_ID"));
+				map.put("REG_PGM"    , paramMap.get("APP_ID"));
+				map.put("MOD_ID"     , paramMap.get("USER_ID"));
+				map.put("MOD_PGM"    , paramMap.get("APP_ID"));
+
+				wbsMakeGenTaskDao.upsertTaskWbsDepth(map);
+				iCount++;
+			}
+		}
+
+		//--[add 2023-11-30]--------------------------------------------------------------------------
+		// logger.debug("▶ [과제 WBS 생성요청]");
+		//----------------------------------------------------------------------------
+		if ("APPR".equals(paramMap.get("SEPARATOR"))) {
+			paramMap = approveTaskInfo(dataRequest);
+		}
+
+		//----------------------------------------------------------------------------
+		logger.debug("▶ [과제 WBS 단계(국책과제): " + iCount + " / " + dsList.size() + " 건 저장]");
+		//----------------------------------------------------------------------------
+		paramMap.put("RESULT_CD", "SUCC");
+		return paramMap;
+	}
+
+	@Override
+	public List<Map<String, Object>> selectCommCd(Map<String, String> paramMap) throws Exception {
+		return wbsMakeGenTaskDao.selectCommCd(paramMap);
+	}
+
+	@Override
+	public List<Map<String, Object>> selectTaskWbsItemDefault(Map<String, String> paramMap) throws Exception {
+		return wbsMakeGenTaskDao.selectTaskWbsItemDefault(paramMap);
+	}
+
+	@Override
+	public List<Map<String, Object>> selectTaskWbsItemDefaultNew(Map<String, String> paramMap) throws Exception {
+		return wbsMakeGenTaskDao.selectTaskWbsItemDefaultNew(paramMap);
+	}
+
+	@Override
+	public List<Map<String, Object>> selectTaskWbsItem(Map<String, String> paramMap) throws Exception {
+		return wbsMakeGenTaskDao.selectTaskWbsItem(paramMap);
+	}
+
+	@Override
+	public Map<String, String> deleteTaskWbsItemPopup(DataRequest dataRequest) throws Exception {
+		Map<String, String> paramMap = new HashMap<String, String>();
+		List<Map<String, String>> dsList = dataRequest.getParameterGroup("dsListSave").getAllRowList();
+		int iCount = 0;
+
+		//----------------------------------------------------------------------------
+		logger.debug("▶ [과제 WBS 항목]" + dsList.size());
+		//----------------------------------------------------------------------------
+		if (dsList.size() > 0) {
+			for (Map<String, String> map : dsList) {
+				wbsMakeGenTaskDao.deleteTaskWbsItemPopup(map);
+				iCount++;
+			}
+		}
+		
+		//----------------------------------------------------------------------------
+		logger.debug("▶ [과제 WBS 항목: " + iCount + " / " + dsList.size() + " 건 삭제]");
+		//----------------------------------------------------------------------------
+		paramMap.put("RESULT_CD", "SUCC");
+		return paramMap;
+	}
+
+	@Override
+	public List<Map<String, Object>> selectTaskWbsItemPopup(Map<String, String> paramMap) throws Exception {
+		return wbsMakeGenTaskDao.selectTaskWbsItemPopup(paramMap);
+	}
+
+	@Override
+	public Map<String, String> updateWbsTaskDepth(DataRequest dataRequest) throws Exception {
+		Map<String, String> paramMap = dataRequest.getParameterGroup("dmParam").getSingleValueMap();
+		List<Map<String, String>> dsList = dataRequest.getParameterGroup("dsListSave").getAllRowList();
+		
+		paramMap.put("MOD_ID"  , paramMap.get("USER_ID"));
+		paramMap.put("MOD_PGM" , paramMap.get("APP_ID"));
+		
+		Map<String, String> dmItemCd = new HashMap<>();
+		if ("G".equals(paramMap.get("TASK_TYPE"))) {
+			dmItemCd = dataRequest.getParameterGroup("dmItemCd").getSingleValueMap();
+		}
+
+		int iCount = 0;
+		//----------------------------------------------------------------------------
+		logger.debug("▶ [과제유형: " + paramMap.get("TASK_TYPE") + "]"+ dsList.size());
+		//----------------------------------------------------------------------------
+		if (dsList.size() > 0) {
+			for (Map<String, String> map : dsList) {
+				map.put("MOD_ID"  , paramMap.get("MOD_ID"));
+				map.put("MOD_PGM" , paramMap.get("MOD_PGM"));
+
+				wbsMakeGenTaskDao.updateWbsTaskDepth(map);
+
+				//----------------------------------------------------------------------------
+				// 과제유형: 일반(내부과제)인 경우 WBS_ITEM을 적용한다.
+				//----------------------------------------------------------------------------
+				if ("G".equals(paramMap.get("TASK_TYPE"))) {
+					//----------------------------------------------------------------------------
+					logger.debug("▶ [과제유형: 일반(내부과제)]: 과제 WBS 항목 삭제");
+					//----------------------------------------------------------------------------
+					wbsMakeGenTaskDao.deleteTaskWbsItem(map);
+					
+					//----------------------------------------------------------------------------
+					logger.debug("▶ [과제 WBS항목 저장]");
+					//----------------------------------------------------------------------------
+					if (!"".equals(map.get("ITEM_CD"))) {
+						for (String itemCd : map.get("ITEM_CD").split(",")) {
+							//----------------------------------------------------------------------------
+							logger.debug("▶ [COMM_CD] " + itemCd);
+							logger.debug("▶ [COMM_GP] ITEM_CD");
+							logger.debug("▶ [TASK_NO]" + map.get("TASK_NO"));
+							logger.debug("▶ [DEPTH_GP]" + map.get("DEPTH_GP"));
+							logger.debug("▶ [CODE_DEPTH_GP]" + map.get("CODE_DEPTH_GP"));
+							//----------------------------------------------------------------------------
+							map.put("COMM_GP", dmItemCd.get("COMM_GP"));
+							map.put("COMM_CD", itemCd);
+							map.put("ITEM_CD", itemCd);
+							if (!"".equals(map.get("COMM_GP")) && !"".equals(map.get("COMM_CD"))) {
+								Map<String, Object> mapSelectCommCd = commonDao.selectCommCd(map);
+								if (mapSelectCommCd != null && !mapSelectCommCd.isEmpty()) {
+									map.put("ITEM_NM", mapSelectCommCd.get("COMM_NM").toString());
+								}
+							}
+							
+							//----------------------------------------------------------------------------
+							logger.debug("▶ [ESSENTIAL_YN]");
+							//----------------------------------------------------------------------------
+							Map<String, Object> mapEss = wbsMakeGenTaskDao.selectTaskWbsItemEssentialYn(map);
+
+							//----------------------------------------------------------------------------
+							logger.debug("▶ [mapEss.size()] " + mapEss.size());
+							//----------------------------------------------------------------------------
+							if (mapEss.size() > 0) {
+								Object value = mapEss.get("ESSENTIAL_YN");
+								map.put("ESSENTIAL_YN" , (value == null ? "" : value.toString()) );
+							}
+							
+							wbsMakeGenTaskDao.upsertTaskWbsItem(map);
+						}
+					}
+				}
+				iCount++;
+			}
+		}
+
+		//----------------------------------------------------------------------------
+		logger.debug("▶ [과제 WBS 단계: " + iCount + " / " + dsList.size() + " 건 저장]");
+		//----------------------------------------------------------------------------
+		paramMap.put("RESULT_CD", "SUCC");
+		return paramMap;
+	}
+
+	@Override
+	public Map<String, String> updateWbsTaskDepthNew(DataRequest dataRequest) throws Exception {
+		Map<String, String> paramMap = dataRequest.getParameterGroup("dmParam").getSingleValueMap();
+		List<Map<String, String>> dsListItem = dataRequest.getParameterGroup("dsListItemSave").getAllRowList();
+		List<Map<String, String>> dsListDepth = dataRequest.getParameterGroup("dsListDepthSave").getAllRowList();
+		
+		paramMap.put("REG_ID"  , paramMap.get("USER_ID"));
+		paramMap.put("REG_PGM" , paramMap.get("APP_ID"));
+		paramMap.put("MOD_ID"  , paramMap.get("USER_ID"));
+		paramMap.put("MOD_PGM" , paramMap.get("APP_ID"));
+		
+		Map<String, String> dmItemCd = new HashMap<>();
+		dmItemCd = dataRequest.getParameterGroup("dmItemCd").getSingleValueMap();
+
+		//----------------------------------------------------------------------------
+		logger.debug("▶ [과제유형: " + paramMap.get("TASK_TYPE") + "]"+ dsListItem.size());
+		//----------------------------------------------------------------------------
+		int iCount = 0;
+		if (dsListItem.size() > 0) {
+			for (Map<String, String> map : dsListItem) {
+				//----------------------------------------------------------------------------
+				logger.debug("▶ [ESSENTIAL_YN]");
+				//----------------------------------------------------------------------------
+				Map<String, Object> mapEss = wbsMakeGenTaskDao.selectTaskWbsItemEssentialYn(map);
+
+				//----------------------------------------------------------------------------
+				logger.debug("▶ [mapEss.size()] " + mapEss.size());
+				//----------------------------------------------------------------------------
+				if (mapEss.size() > 0) {
+					Object value = mapEss.get("ESSENTIAL_YN");
+					map.put("ESSENTIAL_YN" , (value == null ? "" : value.toString()) );
+				}
+				
+				wbsMakeGenTaskDao.upsertTaskWbsItemNew(map);
+				
+				//----------------------------------------------------------------------------
+				logger.debug("▶ [과제 WBS 참여 인원 저장]");
+				//----------------------------------------------------------------------------
+				if (!"".equals(map.get("ATT_USER_ID"))) {
+					wbsMakeGenTaskDao.deleteTaskWbsAttNew(map);
+					for (String userId : map.get("ATT_USER_ID").split(",")) {
+						map.put("ATT_USER_ID", userId.replaceAll(" ", ""));
+						wbsMakeGenTaskDao.insertTaskWbsAttNew(map);
+					}
+				}
+				iCount++;
+			}
+		}
+		
+		wbsMakeGenTaskDao.deleteTaskWbsDepthNew(paramMap);
+		if (dsListDepth.size() > 0) {
+			for (Map<String, String> mapDepth : dsListDepth) {
+				if ("".equals(mapDepth.get("TASK_NO"))) {
+					//----------------------------------------------------------------------------
+					logger.debug("▶ [신규인 경우 TASK_NO생성]");
+					//----------------------------------------------------------------------------
+					mapDepth.put("TASK_NO", paramMap.get("TASK_NO"));
+				}
+
+				//----------------------------------------------------------------------------
+				logger.debug("▶ [과제 기본조회]");
+				//----------------------------------------------------------------------------
+				Map<String, Object> mapTaskBaseInfo = projectProposalDao.selectTaskBaseInfo(mapDepth);
+				
+				mapDepth.put("COMM_GP", dmItemCd.get("COMM_GP"));
+				mapDepth.put("COMM_CD", mapDepth.get("DEPTH_GP"));
+				if ("".equals(mapDepth.get("DEPTH_NM"))) {
+					mapDepth.put("DEPTH_NM"   , commonDao.selectCommCd(mapDepth).get("COMM_NM").toString());
+				}
+				
+				mapDepth.put("DEPT_CD"    , mapTaskBaseInfo.get("SUPER_DEPT_CD").toString());
+				mapDepth.put("CHARGER_ID" , mapTaskBaseInfo.get("TASK_PL_EMPNO").toString());
+				mapDepth.put("REG_ID"     , paramMap.get("USER_ID"));
+				mapDepth.put("REG_PGM"    , paramMap.get("APP_ID"));
+				mapDepth.put("MOD_ID"     , paramMap.get("USER_ID"));
+				mapDepth.put("MOD_PGM"    , paramMap.get("APP_ID"));
+				
+				//----------------------------------------------------------------------------
+				logger.debug("▶ [과제 WBS 단계 저장]");
+				logger.debug("▶ [TASK_NO] "+ mapDepth.get("TASK_NO"));
+				logger.debug("▶ [DEPTH_GP] "+ mapDepth.get("DEPTH_GP"));
+				//----------------------------------------------------------------------------
+				wbsMakeGenTaskDao.insertTaskWbsDepthNew(mapDepth);
+			}
+		}
+		
+		//----------------------------------------------------------------------------
+		logger.debug("▶ [과제 WBS 항목: " + iCount + " / " + dsListItem.size() + " 건 저장]");
+		//----------------------------------------------------------------------------
+
+		paramMap.put("RESULT_CD", "SUCC");
+		return paramMap;
+	}
+
+
+}
