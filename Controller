@@ -1,0 +1,680 @@
+package hds.tech.rpms.project.web;
+
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.apache.commons.collections4.map.HashedMap;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.servlet.View;
+
+import com.cleopatra.protocol.data.DataRequest;
+import com.cleopatra.protocol.data.ParameterGroup;
+import com.cleopatra.spring.JSONDataView;
+
+import hds.tech.rpms.common.web.UICommonController;
+import hds.tech.rpms.project.service.ProjectProposalService;
+import hds.tech.rpms.project.service.WbsMakeGenTaskService;
+
+@Controller
+public class WbsMakeGenTaskController extends UICommonController {
+	private static final Logger logger = LoggerFactory.getLogger(WbsMakeGenTaskController.class);
+
+	@Resource(name="WbsMakeGenTaskService")
+    private WbsMakeGenTaskService wbsMakeGenTaskService;
+
+	@Resource(name="ProjectProposalService")
+    private ProjectProposalService projectProposalService;
+
+	/**
+	 * 과제정보조회
+	 * @param request
+	 * @param response
+	 * @param dataRequest
+	 * @return
+	 * @throws Exception
+	 */
+	@RequestMapping(value = "/project/wbsMake/getGenTaskInfo.do")
+	public View getTaskInfo(HttpServletRequest request, HttpServletResponse response, DataRequest dataRequest) throws Exception {
+		ParameterGroup dmParam = dataRequest.getParameterGroup("dmParam");
+		Map<String, String> paramMap = dmParam.getSingleValueMap();
+		
+		List<Map<String,Object>> dsTaskWbsInfo = wbsMakeGenTaskService.selectTaskWbsInfo(paramMap);
+		dataRequest.setResponse("dsTaskWbsInfo", dsTaskWbsInfo);
+		
+		Map<String, Object> mapTaskBaseInfo = projectProposalService.selectTaskBaseInfo(paramMap);
+		dataRequest.setResponse("dmTaskBaseInfo", mapTaskBaseInfo);
+		
+		return new JSONDataView();
+	}
+	
+	/**
+	 * 과제정보조회NEW
+	 * @param request
+	 * @param response
+	 * @param dataRequest
+	 * @return
+	 * @throws Exception
+	 */
+	@RequestMapping(value = "/project/wbsMake/getGenTaskInfoNew.do")
+	public View getTaskInfoNew(HttpServletRequest request, HttpServletResponse response, DataRequest dataRequest) throws Exception {
+		ParameterGroup dmParam = dataRequest.getParameterGroup("dmParam");
+		Map<String, String> paramMap = dmParam.getSingleValueMap();
+		
+		List<Map<String,Object>> dsTaskWbsInfo = wbsMakeGenTaskService.selectTaskWbsInfoNew(paramMap);
+		dataRequest.setResponse("dsTaskWbsInfo", dsTaskWbsInfo);
+		
+		Map<String, Object> mapTaskBaseInfo = projectProposalService.selectTaskBaseInfo(paramMap);
+		dataRequest.setResponse("dmTaskBaseInfo", mapTaskBaseInfo);
+		
+		return new JSONDataView();
+	}
+	
+	/**
+	 * 과제참여인력조회
+	 * @param request
+	 * @param response
+	 * @param dataRequest
+	 * @return
+	 * @throws Exception
+	 */
+	@RequestMapping(value = "/project/wbsMake/getUserNmInfo.do")
+	public View getUserNmInfo(HttpServletRequest request, HttpServletResponse response, DataRequest dataRequest) throws Exception {
+		ParameterGroup dmParam = dataRequest.getParameterGroup("dmParam");
+		Map<String, String> paramMap = dmParam.getSingleValueMap();
+		
+		List<Map<String,Object>> dsTASK_ATT_TNOP = wbsMakeGenTaskService.selectUserNmInfo(paramMap);
+		dataRequest.setResponse("dsTASK_ATT_TNOP", dsTASK_ATT_TNOP);
+		
+		return new JSONDataView();
+	}
+	
+	/**
+	 * 과제WBS저장
+	 * @param request
+	 * @param response
+	 * @param dataRequest
+	 * @return
+	 * @throws Exception
+	 */
+	@RequestMapping(value = "/project/wbsMake/saveGenTaskInfo.do")
+	public View saveTaskInfo(HttpServletRequest request, HttpServletResponse response, DataRequest dataRequest) throws Exception {
+
+		Map<String, String> map = new HashedMap<>();
+		
+		try {
+			map = wbsMakeGenTaskService.saveTaskWbsInfo(dataRequest);
+		} catch (Exception e) {
+			if (logger.isErrorEnabled()) {
+				logger.error(e.getMessage());
+			}
+			return new JSONDataView(setMessageFail(e));
+		}
+
+		setMessageSuccess(dataRequest);
+		dataRequest.setResponse("dmParam", map);
+        return new JSONDataView();
+	}
+	
+	/**
+	 * 과제WBS저장(NEW)
+	 * @param request
+	 * @param response
+	 * @param dataRequest
+	 * @return
+	 * @throws Exception
+	 */
+	@RequestMapping(value = "/project/wbsMake/saveGenTaskInfoNew.do")
+	public View saveTaskInfoNew(HttpServletRequest request, HttpServletResponse response, DataRequest dataRequest) throws Exception {
+
+		Map<String, String> map = new HashedMap<>();
+		
+		try {
+			map = wbsMakeGenTaskService.saveTaskWbsInfoNew(dataRequest);
+		} catch (Exception e) {
+			if (logger.isErrorEnabled()) {
+				logger.error(e.getMessage());
+			}
+			return new JSONDataView(setMessageFail(e));
+		}
+
+		setMessageSuccess(dataRequest);
+		dataRequest.setResponse("dmParam", map);
+        return new JSONDataView();
+	}
+	
+	/**
+	 * 과제WBS삭제
+	 * @param request
+	 * @param response
+	 * @param dataRequest
+	 * @return
+	 * @throws Exception
+	 */
+	@RequestMapping(value = "/project/wbsMake/deleteGenTaskInfo.do")
+	public View deleteGenTaskInfo(HttpServletRequest request, HttpServletResponse response, DataRequest dataRequest) throws Exception {
+		Map<String, String> map = new HashedMap<>();
+		
+		try {
+			map = wbsMakeGenTaskService.deleteTaskWbsDepthInfo(dataRequest);
+		} catch (Exception e) {
+			if (logger.isErrorEnabled()) {
+				logger.error(e.getMessage());
+			}
+			map.put("RESULT_CD", "FAIL");
+			dataRequest.setResponse("dmParam", map);
+			return new JSONDataView(setMessageFail(e));
+		}
+
+		setMessageSuccess(dataRequest);
+		dataRequest.setResponse("dmParam", map);
+        return new JSONDataView();
+	}
+	
+	/**
+	 * 과제WBS삭제(NEW)
+	 * @param request
+	 * @param response
+	 * @param dataRequest
+	 * @return
+	 * @throws Exception
+	 */
+	@RequestMapping(value = "/project/wbsMake/deleteGenTaskInfoNew.do")
+	public View deleteGenTaskInfoNew(HttpServletRequest request, HttpServletResponse response, DataRequest dataRequest) throws Exception {
+		Map<String, String> map = new HashedMap<>();
+		
+		try {
+			map = wbsMakeGenTaskService.deleteTaskWbsDepthInfoNew(dataRequest);
+		} catch (Exception e) {
+			if (logger.isErrorEnabled()) {
+				logger.error(e.getMessage());
+			}
+			map.put("RESULT_CD", "FAIL");
+			dataRequest.setResponse("dmParam", map);
+			return new JSONDataView(setMessageFail(e));
+		}
+
+		setMessageSuccess(dataRequest);
+		dataRequest.setResponse("dmParam", map);
+        return new JSONDataView();
+	}
+	
+	/**
+	 * 과제 WBS 단계조회(퀵과제)
+	 * @param request
+	 * @param response
+	 * @param dataRequest
+	 * @return
+	 * @throws Exception
+	 */
+	@RequestMapping(value = "/project/wbsMake/getTaskWbsDepth.do")
+	public View getTaskWbsDepth(HttpServletRequest request, HttpServletResponse response, DataRequest dataRequest) throws Exception {
+		ParameterGroup dmParam = dataRequest.getParameterGroup("dmParam");
+		Map<String, String> paramMap = dmParam.getSingleValueMap();
+
+		List<Map<String, Object>> dsTaskWbsDepth = wbsMakeGenTaskService.selectTaskWbsDepth(paramMap);
+		dataRequest.setResponse("dsTaskWbsDepth", dsTaskWbsDepth);
+
+		Map<String, Object> mapTaskBaseInfo = projectProposalService.selectTaskBaseInfo(paramMap);
+		dataRequest.setResponse("dmTaskBaseInfo", mapTaskBaseInfo);
+		
+		return new JSONDataView();
+	}
+	
+	/**
+	 * 과제 WBS 단계 저장(퀵과제)
+	 * @param request
+	 * @param response
+	 * @param dataRequest
+	 * @return
+	 * @throws Exception
+	 */
+	@RequestMapping(value = "/project/wbsMake/saveQukTaskDepth.do")
+	public View saveQukTaskDepth(HttpServletRequest request, HttpServletResponse response, DataRequest dataRequest) throws Exception {
+
+		Map<String, String> map = new HashedMap<>();
+		
+		try {
+			map = wbsMakeGenTaskService.saveQukTaskDepth(dataRequest);
+		} catch (Exception e) {
+			if (logger.isErrorEnabled()) {
+				logger.error(e.getMessage());
+			}
+			return new JSONDataView(setMessageFail(e));
+		}
+
+		setMessageSuccess(dataRequest);
+		dataRequest.setResponse("dmParam", map);
+        return new JSONDataView();
+	}
+	
+	/**
+	 * 과제 WBS 단계 저장(위탁,국책,기술,공통)
+	 * @param request
+	 * @param response
+	 * @param dataRequest
+	 * @return
+	 * @throws Exception
+	 */
+	@RequestMapping(value = "/project/wbsMake/saveCommTaskDepth.do")
+	public View saveCommTaskDepth(HttpServletRequest request, HttpServletResponse response, DataRequest dataRequest) throws Exception {
+		Map<String, String> map = new HashedMap<>();
+		
+		try {
+			map = wbsMakeGenTaskService.saveCommTaskDepth(dataRequest);
+		} catch (Exception e) {
+			if (logger.isErrorEnabled()) {
+				logger.error(e.getMessage());
+			}
+			map.put("RESULT_CD", "FAIL");
+			dataRequest.setResponse("dmParam", map);
+			return new JSONDataView(setMessageFail(e));
+		}
+
+		setMessageSuccess(dataRequest);
+		dataRequest.setResponse("dmParam", map);
+        return new JSONDataView();
+	}
+
+	/**
+	 * 과제 WBS 단계 삭제(퀵과제)
+	 * @param request
+	 * @param response
+	 * @param dataRequest
+	 * @return
+	 * @throws Exception
+	 */
+	@RequestMapping(value = "/project/wbsMake/deleteQukTaskDepth.do")
+	public View deleteQukTaskDepth(HttpServletRequest request, HttpServletResponse response, DataRequest dataRequest) throws Exception {
+		Map<String, String> map = new HashedMap<>();
+		
+		try {
+			map = wbsMakeGenTaskService.deleteTaskWbsDepth(dataRequest);
+		} catch (Exception e) {
+			if (logger.isErrorEnabled()) {
+				logger.error(e.getMessage());
+			}
+			map.put("RESULT_CD", "FAIL");
+			dataRequest.setResponse("dmParam", map);
+			return new JSONDataView(setMessageFail(e));
+		}
+
+		setMessageSuccess(dataRequest);
+		dataRequest.setResponse("dmParam", map);
+        return new JSONDataView();
+	}
+	
+	/**
+	 * 과제 WBS 생성요청
+	 * @param request
+	 * @param response
+	 * @param dataRequest
+	 * @return
+	 * @throws Exception
+	 */
+	@RequestMapping(value = "/project/wbsMake/approveTaskInfo.do")
+	public View approveTaskInfo(HttpServletRequest request, HttpServletResponse response, DataRequest dataRequest) throws Exception {
+		Map<String, String> map = new HashedMap<>();
+		
+		try {
+			map = wbsMakeGenTaskService.approveTaskInfo(dataRequest);
+		} catch (Exception e) {
+			if (logger.isErrorEnabled()) {
+				logger.error(e.getMessage());
+			}
+			map.put("RESULT_CD", "FAIL");
+			dataRequest.setResponse("dmParam", map);
+			return new JSONDataView(setMessageFail(e));
+		}
+
+		setMessageSuccess(dataRequest);
+		dataRequest.setResponse("dmParam", map);
+        return new JSONDataView();
+		
+	}
+
+	/**
+	 * 과제Gate설정용과제정보(PMO,TL공통)
+	 * @param request
+	 * @param response
+	 * @param dataRequest
+	 * @return
+	 * @throws Exception
+	 */
+	@RequestMapping(value = "/project/wbsMake/getGatePMO.do")
+	public View selectGatePMO(HttpServletRequest request, HttpServletResponse response, DataRequest dataRequest) throws Exception {
+		ParameterGroup dmGate = dataRequest.getParameterGroup("dmGate");
+		Map<String, String> paramMap = dmGate.getSingleValueMap();
+		
+		List<Map<String,Object>> dsTaskBaseInfoHeader = wbsMakeGenTaskService.selectGatePMO(paramMap);
+		dataRequest.setResponse("dsTaskBaseInfoHeader", dsTaskBaseInfoHeader);
+		return new JSONDataView();
+	}
+	
+	@RequestMapping(value = "/project/wbsMake/getGateTL.do")
+	public View selectGateTL(HttpServletRequest request, HttpServletResponse response, DataRequest dataRequest) throws Exception {
+		Map<String, String> dmParam = dataRequest.getParameterGroup("dmParam").getSingleValueMap();
+		Map<String, String> paramMap = dataRequest.getParameterGroup("dmGate").getSingleValueMap();
+		paramMap.put("USER_ID", dmParam.get("USER_ID"));
+		
+		List<Map<String,Object>> dsTaskBaseInfoHeader = wbsMakeGenTaskService.selectGateTL(paramMap);
+		dataRequest.setResponse("dsTaskBaseInfoHeader", dsTaskBaseInfoHeader);
+		return new JSONDataView();
+	}
+	
+	@RequestMapping(value = "/project/wbsMake/getTaskBaseInfoHeader.do")
+	public View getTaskBaseInfoHeader(HttpServletRequest request, HttpServletResponse response, DataRequest dataRequest) throws Exception {
+		ParameterGroup dmGate = dataRequest.getParameterGroup("dmGate");
+		Map<String, String> paramMap = dmGate.getSingleValueMap();
+		
+		List<Map<String,Object>> dsTaskBaseInfoHeader = wbsMakeGenTaskService.selectTaskBaseInfoHeader(paramMap);
+		dataRequest.setResponse("dsTaskBaseInfoHeader", dsTaskBaseInfoHeader);
+		return new JSONDataView();
+	}
+	
+	/**
+	 * 과제Gate설정용과제정보(내부과제(일반))
+	 * @param request
+	 * @param response
+	 * @param dataRequest
+	 * @return
+	 * @throws Exception
+	 */
+	@RequestMapping(value = "/project/wbsMake/getTaskTypeIG.do")
+	public View getTaskTypeIG(HttpServletRequest request, HttpServletResponse response, DataRequest dataRequest) throws Exception {
+		ParameterGroup dmGate = dataRequest.getParameterGroup("dmGate");
+		Map<String, String> paramMap = dmGate.getSingleValueMap();
+		
+		List<Map<String,Object>> dsTaskTypeIG = wbsMakeGenTaskService.selectTaskWbsInfo(paramMap);
+		dataRequest.setResponse("dsTaskTypeIG", dsTaskTypeIG);
+		return new JSONDataView();
+	}
+	
+	/**
+	 * 과제Gate설정용과제정보(내부과제(퀵))
+	 * @param request
+	 * @param response
+	 * @param dataRequest
+	 * @return
+	 * @throws Exception
+	 */
+	@RequestMapping(value = "/project/wbsMake/getTaskTypeIQ.do")
+	public View getTaskTypeIQ(HttpServletRequest request, HttpServletResponse response, DataRequest dataRequest) throws Exception {
+		ParameterGroup dmGate = dataRequest.getParameterGroup("dmGate");
+		Map<String, String> paramMap = dmGate.getSingleValueMap();
+		
+		List<Map<String,Object>> dsTaskTypeIQ = wbsMakeGenTaskService.selectTaskWbsInfo(paramMap);
+		dataRequest.setResponse("dsTaskTypeIQ", dsTaskTypeIQ);
+		return new JSONDataView();
+	}
+
+	/**
+	 * 과제Gate설정용과제정보(위탁과제)
+	 * @param request
+	 * @param response
+	 * @param dataRequest
+	 * @return
+	 * @throws Exception
+	 */
+	@RequestMapping(value = "/project/wbsMake/getTaskTypeC.do")
+	public View getTaskTypeC(HttpServletRequest request, HttpServletResponse response, DataRequest dataRequest) throws Exception {
+		ParameterGroup dmGate = dataRequest.getParameterGroup("dmGate");
+		Map<String, String> paramMap = dmGate.getSingleValueMap();
+		
+		List<Map<String,Object>> dsTaskTypeC = wbsMakeGenTaskService.selectTaskWbsInfo(paramMap);
+		dataRequest.setResponse("dsTaskTypeC", dsTaskTypeC);
+		return new JSONDataView();
+	}
+
+	/**
+	 * 과제Gate설정용과제정보(공동과제)
+	 * @param request
+	 * @param response
+	 * @param dataRequest
+	 * @return
+	 * @throws Exception
+	 */
+	@RequestMapping(value = "/project/wbsMake/getTaskTypeR.do")
+	public View getTaskTypeR(HttpServletRequest request, HttpServletResponse response, DataRequest dataRequest) throws Exception {
+		ParameterGroup dmGate = dataRequest.getParameterGroup("dmGate");
+		Map<String, String> paramMap = dmGate.getSingleValueMap();
+		
+		List<Map<String,Object>> dsTaskTypeR = wbsMakeGenTaskService.selectTaskWbsInfo(paramMap);
+		dataRequest.setResponse("dsTaskTypeR", dsTaskTypeR);
+		return new JSONDataView();
+	}
+
+	/**
+	 * Gate설정(저장)
+	 * @param request
+	 * @param response
+	 * @param dataRequest
+	 * @return
+	 * @throws Exception
+	 */
+	@RequestMapping(value = "/project/wbsMake/saveGate.do")
+	public View saveGate(HttpServletRequest request, HttpServletResponse response, DataRequest dataRequest) throws Exception {
+		Map<String, String> map = new HashedMap<>();
+		
+		try {
+			map = wbsMakeGenTaskService.saveGate(dataRequest);
+		} catch (Exception e) {
+			if (logger.isErrorEnabled()) {
+				logger.error(e.getMessage());
+			}
+			map.put("RESULT_CD", "FAIL");
+			dataRequest.setResponse("dmParam", map);
+			return new JSONDataView(setMessageFail(e));
+		}
+
+		setMessageSuccess(dataRequest);
+		dataRequest.setResponse("dmParam", map);
+        return new JSONDataView();
+		
+	}
+	
+	/**
+	 * 과제 WBS 단계조회(국책과제)
+	 * @param request
+	 * @param response
+	 * @param dataRequest
+	 * @return
+	 * @throws Exception
+	 */
+	@RequestMapping(value = "/project/wbsMake/getTaskWbsNatl.do")
+	public View getTaskWbsNatl(HttpServletRequest request, HttpServletResponse response, DataRequest dataRequest) throws Exception {
+		ParameterGroup dmParam = dataRequest.getParameterGroup("dmParam");
+		Map<String, String> paramMap = dmParam.getSingleValueMap();
+		
+		List<Map<String, Object>> dsTaskWbsNatl = wbsMakeGenTaskService.selectTaskWbsNatl(paramMap);
+		dataRequest.setResponse("dsTaskWbsNatl", dsTaskWbsNatl);
+
+		Map<String, Object> mapTaskBaseInfo = projectProposalService.selectTaskBaseInfo(paramMap);
+		dataRequest.setResponse("dmTaskBaseInfo", mapTaskBaseInfo);
+		
+		return new JSONDataView();
+	}
+
+	/**
+	 * 과제 WBS 단계저장(국책과제)
+	 * @param request
+	 * @param response
+	 * @param dataRequest
+	 * @return
+	 * @throws Exception
+	 */
+	@RequestMapping(value = "/project/wbsMake/saveTaskWbsNatl.do")
+	public View saveTaskWbsNatl(HttpServletRequest request, HttpServletResponse response, DataRequest dataRequest) throws Exception {
+		Map<String, String> map = new HashedMap<>();
+		
+		try {
+			map = wbsMakeGenTaskService.saveTaskWbsNatl(dataRequest);
+		} catch (Exception e) {
+			if (logger.isErrorEnabled()) {
+				logger.error(e.getMessage());
+			}
+			map.put("RESULT_CD", "FAIL");
+			dataRequest.setResponse("dmParam", map);
+			return new JSONDataView(setMessageFail(e));
+		}
+
+		setMessageSuccess(dataRequest);
+		dataRequest.setResponse("dmParam", map);
+        return new JSONDataView();
+	}
+	
+	@RequestMapping(value = "/project/wbsMake/updateWbsTaskDepth.do")
+	public View updateWbsTaskDepth(HttpServletRequest request, HttpServletResponse response, DataRequest dataRequest) throws Exception {
+		Map<String, String> map = new HashedMap<>();
+		
+		try {
+			map = wbsMakeGenTaskService.updateWbsTaskDepth(dataRequest);
+		} catch (Exception e) {
+			if (logger.isErrorEnabled()) {
+				logger.error(e.getMessage());
+			}
+			map.put("RESULT_CD", "FAIL");
+			dataRequest.setResponse("dmParam", map);
+			return new JSONDataView(setMessageFail(e));
+		}
+
+		setMessageSuccess(dataRequest);
+		dataRequest.setResponse("dmParam", map);
+        return new JSONDataView();
+	}
+	
+	@RequestMapping(value = "/project/wbsMake/updateWbsTaskDepthNew.do")
+	public View updateWbsTaskDepthNew(HttpServletRequest request, HttpServletResponse response, DataRequest dataRequest) throws Exception {
+		Map<String, String> map = new HashedMap<>();
+		
+		try {
+			map = wbsMakeGenTaskService.updateWbsTaskDepthNew(dataRequest);
+		} catch (Exception e) {
+			if (logger.isErrorEnabled()) {
+				logger.error(e.getMessage());
+			}
+			map.put("RESULT_CD", "FAIL");
+			dataRequest.setResponse("dmParam", map);
+			return new JSONDataView(setMessageFail(e));
+		}
+
+		setMessageSuccess(dataRequest);
+		dataRequest.setResponse("dmParam", map);
+        return new JSONDataView();
+	}
+	
+	/**
+	 * 단계별분류항목조회
+	 * @param request
+	 * @param response
+	 * @param dataRequest
+	 * @return
+	 * @throws Exception
+	 */
+	@RequestMapping(value = "/project/wbsMake/getTaskItemCd.do")
+	public View getTaskClassItem(HttpServletRequest request, HttpServletResponse response, DataRequest dataRequest) throws Exception {
+		Map<String, String> paramMap = dataRequest.getParameterGroup("dmParam").getSingleValueMap();
+		
+//		List<Map<String,Object>> dsItemCd = wbsMakeGenTaskService.selectCommCd(paramMap);
+		List<Map<String,Object>> dsItemCd = wbsMakeGenTaskService.selectTaskWbsItemDefault(paramMap);
+		dataRequest.setResponse("dsItemCd", dsItemCd);
+		return new JSONDataView();
+	}
+
+	/**
+	 * 단계별분류항목조회NEW
+	 * @param request
+	 * @param response
+	 * @param dataRequest
+	 * @return
+	 * @throws Exception
+	 */
+	@RequestMapping(value = "/project/wbsMake/getTaskItemCdNew.do")
+	public View getTaskClassItemNew(HttpServletRequest request, HttpServletResponse response, DataRequest dataRequest) throws Exception {
+		Map<String, String> paramMap = dataRequest.getParameterGroup("dmParam").getSingleValueMap();
+		
+		List<Map<String,Object>> dsItemCd = wbsMakeGenTaskService.selectTaskWbsItemDefaultNew(paramMap);
+		dataRequest.setResponse("dsItemCd", dsItemCd);
+		return new JSONDataView();
+	}
+
+	/**
+	 * 과제Gate설정(PMO/TL)
+	 * @param request
+	 * @param response
+	 * @param dataRequest
+	 * @return
+	 * @throws Exception
+	 */
+	@RequestMapping(value = "/project/wbsMake/getTaskDepthItem.do")
+	public View getTaskDepthItem(HttpServletRequest request, HttpServletResponse response, DataRequest dataRequest) throws Exception {
+		ParameterGroup dmParam = dataRequest.getParameterGroup("dmGate");
+		Map<String, String> paramMap = dmParam.getSingleValueMap();
+		
+		List<Map<String,Object>> dsTaskDepthItem = wbsMakeGenTaskService.selectTaskWbsInfo(paramMap);
+		dataRequest.setResponse("dsTaskDepthItem", dsTaskDepthItem);
+		return new JSONDataView();
+	}
+
+	/**
+	 * 수행항목조회(popup)
+	 * @param request
+	 * @param response
+	 * @param dataRequest
+	 * @return
+	 * @throws Exception
+	 */
+	@RequestMapping(value = "/project/wbsMake/getTaskWbsItem.do")
+	public View getTaskWbsItem(HttpServletRequest request, HttpServletResponse response, DataRequest dataRequest) throws Exception {
+		ParameterGroup dmParam = dataRequest.getParameterGroup("dmParam");
+		Map<String, String> paramMap = dmParam.getSingleValueMap();
+		
+		List<Map<String,Object>> dsList = wbsMakeGenTaskService.selectTaskWbsItem(paramMap);
+		dataRequest.setResponse("dsList", dsList);
+		return new JSONDataView();
+	}
+	
+	/**
+	 * 수행항목삭제(popup)
+	 * @param request
+	 * @param response
+	 * @param dataRequest
+	 * @return
+	 * @throws Exception
+	 */
+	@RequestMapping(value = "/project/wbsMake/deleteTaskWbsItem.do")
+	public View deleteTaskWbsItem(HttpServletRequest request, HttpServletResponse response, DataRequest dataRequest) throws Exception {
+		Map<String, String> map = new HashedMap<>();
+		
+		try {
+			map = wbsMakeGenTaskService.deleteTaskWbsItemPopup(dataRequest);
+		} catch (Exception e) {
+			if (logger.isErrorEnabled()) {
+				logger.error(e.getMessage());
+			}
+			map.put("RESULT_CD", "FAIL");
+			dataRequest.setResponse("dmParam", map);
+			return new JSONDataView(setMessageFail(e));
+		}
+
+		setMessageSuccess(dataRequest);
+		dataRequest.setResponse("dmParam", map);
+        return new JSONDataView();
+	}
+
+	@RequestMapping(value = "/project/wbsMake/getTaskWbsItemPopup.do")
+	public View getTaskWbsItemPopup(HttpServletRequest request, HttpServletResponse response, DataRequest dataRequest) throws Exception {
+		ParameterGroup dmParam = dataRequest.getParameterGroup("dmParam");
+		Map<String, String> paramMap = dmParam.getSingleValueMap();
+		
+		List<Map<String,Object>> dsList = wbsMakeGenTaskService.selectTaskWbsItemPopup(paramMap);
+		dataRequest.setResponse("dsList", dsList);
+		return new JSONDataView();
+	}
+}
