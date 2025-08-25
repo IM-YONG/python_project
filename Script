@@ -1,0 +1,1246 @@
+/************************************************
+ * Name  : WbsMakeGenTaskNew.clx
+ * Title : WBS설정(일반과제)NEW
+ * Desc  : WBS설정(일반과제)NEW
+ ************************************************
+ * 수정일          이름              사유
+ ************************************************
+ * 2025. 07. 01.  1531361       최초 작성
+ ************************************************/
+
+/************************************************
+ * 공통 모듈 선언
+ ************************************************/
+var util = createCommonUtil();
+
+/************************************************
+ * 전역 변수 선언
+ ************************************************/
+var userInfo = JSON.parse(sessionStorage.getItem("userInfo"));
+var authInfo = JSON.parse(localStorage.getItem("authInfo"));
+
+var userId = userInfo.USER_ID;					// 사용자 ID
+var pgmId  = AppUtil.getScreenId(app, false);	// pgmId
+
+var dmParam;
+var dsItemCd;
+var dmItemCd;
+var dsDepthGp;
+var dmTaskBaseInfo;
+
+var sACT_TASK_NO;
+var sTASK_METHODOLOGY_DETAIL;
+
+/************************************************
+ * init
+ ************************************************/
+function onBodyInit(e){
+
+	// 코드생성시 내용변경하고, dmParam.COMM_GP값도 필히 변경한다. 
+//	RpmsUtil.getComCode(app, "DEPTH_GP", "G", "dsDepthGp", "cmbDepthGp");
+}
+
+/************************************************
+ * button auth
+ ************************************************/
+function f_setBtnAuth() {
+	// 조회
+	RpmsUtil.setBtnAuth(app, ["btnSearch"]	, authInfo.searchAuth, true);
+
+	// 저장(수정,레코드생성)
+	RpmsUtil.setBtnAuth(app, ["btnSave","btnApproval","btnAdd"]	, authInfo.createAuth, true);
+
+	// 삭제
+	RpmsUtil.setBtnAuth(app, ["btnDelete"]	, authInfo.deleteAuth, true);
+}
+
+/************************************************
+ * load
+ ************************************************/
+function onBodyLoad(e){
+	// 'DEBUG' 버튼 생성
+	RpmsUtil.makeDebugBtn(app);
+	
+	// 버튼권한 적용
+//	f_setBtnAuth(); 
+
+	// 전역변수 set
+	f_setGlobalVariables();
+
+	// pgmId, userId 정보 set
+	f_setPgmUserInfo();
+
+	// 체크된 row만 수정 가능하도록 설정
+    //util.Grid.setCheckRowEdit(app, "grd1");
+
+    // 호출에 의한 내용처리
+	f_appHost();
+	
+	util.Submit.send(app, "subOnload", null, function(subSuccess){} );
+	
+}
+
+/************************************************
+ * 전역변수 set
+ ************************************************/
+function f_setGlobalVariables() {
+	dmParam = app.lookup("dmParam");
+	dsItemCd = app.lookup("dsItemCd");
+	dmItemCd = app.lookup("dmItemCd");
+	dsDepthGp = app.lookup("dsDepthGp");
+	dmTaskBaseInfo = app.lookup("dmTaskBaseInfo");
+}
+
+/************************************************
+ * pgmId, userId 정보 set
+ ************************************************/
+function f_setPgmUserInfo() {
+	dmParam.setValue("APP_ID", pgmId);
+	dmParam.setValue("USER_ID", userId);
+	dmParam.setValue("COMM_GP", "DEPTH_GP");
+
+	dmItemCd.setValue("COMM_GP", "ITEM_CD");
+}
+
+/************************************************
+ * 호출에 의한 내용처리
+ ************************************************/
+function f_appHost() {
+	var dialog = app.getHost();
+
+	if (dialog) {
+		// 다이얼로그의 initValue 가져오기
+		var initValue = app.getHostProperty("initValue");
+		
+		if (!ValueUtil.isNull(initValue)) {
+			if (!ValueUtil.isNull(initValue["TASK_NO"])) {
+				if (initValue["HOST_TYPE"] == "WRSLT") {
+					app.lookup("header").getParent().updateConstraint(app.lookup("header"), { height: "0px" });
+					app.lookup("body").getParent().updateConstraint(app.lookup("body"), { top: "0px" });
+					
+					app.lookup("btnStep").visible = false;
+					app.lookup("btnAdd").visible = false;
+					app.lookup("btnDelete").visible = false;
+					app.lookup("grd1").readOnly = true;
+				}
+				app.lookup("ipbTaskNo").value = initValue["TASK_NO"];
+				app.lookup("ipbTaskNm").value = initValue["TASK_NM"];
+				
+				if (!ValueUtil.isNull(initValue["TASK_TYPE_GQ"])) {
+					app.lookup("ipbTaskType").value = initValue["TASK_TYPE_GQ"];
+				}
+				else {
+					app.lookup("ipbTaskType").value = initValue["TASK_TYPE"];
+				}
+				
+				sACT_TASK_NO = initValue["ACT_TASK_NO"];
+				sTASK_METHODOLOGY_DETAIL = initValue["TASK_METHODOLOGY_DETAIL"];
+				if(!ValueUtil.isNull(sACT_TASK_NO)) {
+					RpmsUtil.getComCode(app, "DEPTH_GP", "M", "dsDepthGp", "cmbDepthGp");
+					if(sTASK_METHODOLOGY_DETAIL == "DIC") {
+						dsDepthGp.setFilter("REMARK4 == 'DIC'");
+					}
+				} else {
+					RpmsUtil.getComCode(app, "DEPTH_GP", "G", "dsDepthGp", "cmbDepthGp");
+				}
+				
+				app.lookup("btnSearch").click();
+			}
+		}
+	}
+}
+
+/************************************************
+ * 조회
+ ************************************************/
+function doSearch() {
+
+	util.Submit.send(app, "subGetWbsTaskInfo", null, function(subSuccess) {
+		if (subSuccess) {
+			app.lookup("dtiTaskStartDate").value = dmTaskBaseInfo.getValue("TASK_START_DATE");
+			app.lookup("dtiTaskEndDate").value = dmTaskBaseInfo.getValue("TASK_END_DATE");
+			app.lookup("searchBox").redraw();
+			
+			util.Control.redraw(app, [ "gridContent" ]);
+			
+			// 과제 단계별 상태(TASK_DEPTH_STAT): 'A' 버튼활성화, 'B' 버튼비활성화
+			var taskDepthStat = dmTaskBaseInfo.getValue("TASK_DEPTH_STAT");
+			var tf = taskDepthStat == "B" ? false : true;
+			f_setEnabled(tf);
+		}
+	});
+}
+
+/************************************************
+ * 과제 단계별 상태(TASK_DEPTH_STAT)에 따른 버튼활성화
+ ************************************************/
+function f_setEnabled(tf) {
+	app.lookup("btnSave").enabled = tf;
+	app.lookup("btnApproval").enabled = tf;
+	app.lookup("btnStep").enabled = tf;
+	app.lookup("btnAdd").enabled = tf;
+	app.lookup("btnDelete").enabled = tf;
+}
+
+/************************************************
+ * 임시저장
+ ************************************************/
+function onBtnSaveClick(e){
+	var btnSave = e.control;
+
+	doSave("SAVE");
+}
+
+/************************************************
+ * 생성요청
+ ************************************************/
+function onBtnApprovalClick(e){
+	var btnApproval = e.control;
+
+	doSave("APPR");
+}
+
+/************************************************
+ * 저장공통
+ ************************************************/
+function doSave(separator) {
+	var retVal = f_validateSave(separator);
+
+	if (retVal["RESULT"]) {
+		RpmsUtil.alert(app, retVal["MESSAGE"], function(e){}, 'warn'); 	// success / warn / error
+		return;
+	}
+
+	// 처음데이터 저장시(필수단계[착수/완료] 입력체크)
+	retVal = f_checkConditions();
+
+	if (retVal["RESULT"]) {
+		RpmsUtil.alert(app, retVal["MESSAGE"], function(e){}, 'warn'); 	// success / warn / error
+		return;
+	}
+
+	if (separator == "APPR" || separator == "MOD") {  // MOD.과제수정을 통한 저장 (담당자, 일자만 변경처리한다.)
+		// 미체크된 변경된 데이터복구
+		f_revertRowData();
+
+		// 계획시작/종료일자체크
+		var result = f_checkDuration();
+		
+		if (result["RESULT"]) {
+			RpmsUtil.alert(app, result["MESSAGE"], function(e){}, 'warn');
+			return;
+		}
+	
+		// 계획시작/종료일자체크(과제기간에 포함여부)
+		result = f_checkDuration2();
+		
+		if (result["RESULT"]) {
+			RpmsUtil.alert(app, result["MESSAGE"], function(e){}, 'warn');
+			return;
+		}
+		
+		// 단계별 시작일자가 이전단계의 종료일자와 중복여부체크
+		//result = f_checkDuration3();
+		result = f_checkDuration4();
+		
+		if (result["RESULT"]) {
+			RpmsUtil.alert(app, result["MESSAGE"], function(e){}, 'warn');
+			return;
+		}
+		
+		// 진도율 전체 100% 체크
+		var totalPercent = app.lookup("grd1").dataSet.getSum("PLAN_PROG_RATE_M");
+		if (totalPercent != 100) {
+			RpmsUtil.alert(app, "진도율 전체가 100%가 안됩니다.", function(e){}, 'warn');
+			return;
+		}
+	}	
+
+	// 선택내용생성
+	f_makeDsList("U");
+
+	// 서브미션에 사용할 값설정	
+	var obj = f_setSubmit(separator);
+
+	f_doDML(obj);
+}
+
+/************************************************
+ * validation체크
+ ************************************************/
+function f_validateSave(separator) {
+	var gridId = app.lookup("grd1");
+	var rowIndices = gridId.getCheckRowIndices();
+	var obj = {"RESULT": false};	
+
+	if (rowIndices.length > 0) {
+		if (f_checkRequiredColumn(rowIndices)) {
+			obj["RESULT"] = true;
+			obj["MESSAGE"] = "단계구분을 선택하십시오.";
+			return obj;
+		}
+	}
+	else {
+		if (separator == "APPR") {
+			if (!f_checkTaskNo(gridId)) {
+				obj["RESULT"] = true;
+				obj["MESSAGE"] = "생성된 데이터가 없습니다.";
+				return obj;
+			}
+		}
+		else { // if (separator != "APPR") {
+			obj["RESULT"] = true;
+			obj["MESSAGE"] = "저장할 항목을 선택하십시오.";
+			return obj;
+		}
+	}
+	return obj;
+}
+
+/************************************************
+ *  필수입력항목 입력체크
+ ************************************************/
+function f_checkRequiredColumn(rowIndices) {
+	var retVal = false;
+	var gridId = app.lookup("grd1");
+	
+	rowIndices.forEach(function(rowIndex){
+		if (ValueUtil.isNull(gridId.getCellValue(rowIndex, "CODE_DEPTH_GP"))) {
+			retVal = true;
+			return retVal;
+		}
+	});
+
+	return retVal;	
+}
+
+/************************************************
+ * 과제번호 유무 확인(기존재 데이터확인용) 
+ ************************************************/
+function f_checkTaskNo(gridId) {
+	var result = false;
+	
+	for (var rowIndex = 0; rowIndex < gridId.getRowCount(); rowIndex++) {
+		var taskNo = gridId.getCellValue(rowIndex, "TASK_NO");
+		
+		if (!ValueUtil.isNull(taskNo)) {
+			result = true;
+			return result;
+		}
+	}
+	
+	return result;
+}
+
+/************************************************
+ * 처음데이터 저장시(필수단계[착수/완료] 입력체크)
+ ************************************************/
+function f_checkConditions() {
+	var obj = {"RESULT": false};	
+	var gridId = app.lookup("grd1");
+	var rowIndices = gridId.getCheckRowIndices();
+	var arrCodeDepthGp = [];
+	
+	var arrTaskNo = [];
+	for (var idx = 0; idx < gridId.getRowCount(); idx++) {
+		var taskNo = gridId.getCellValue(idx, "TASK_NO");
+		if (!ValueUtil.isNull(taskNo)) {
+			arrTaskNo.push(taskNo);
+		} 
+	}
+	
+	if (arrTaskNo.length == 0) {
+		if(sACT_TASK_NO != "") {
+			if (rowIndices.length > 0) {
+				rowIndices.forEach(function(rowIndex){
+					var codeDepthGp = gridId.getCellValue(rowIndex, "CODE_DEPTH_GP");
+					if (["M10","M60"].includes(codeDepthGp)) {
+						arrCodeDepthGp.push(codeDepthGp);
+					}
+				});
+			}
+			if (arrCodeDepthGp.length < 2) {
+				obj["RESULT"] = true;
+				obj["MESSAGE"] = "[Define/완료보고]단계는 반드시 추가되어야 합니다.";
+				return obj;
+			}
+		} else {	
+			if (rowIndices.length > 0) {
+				rowIndices.forEach(function(rowIndex){
+					var codeDepthGp = gridId.getCellValue(rowIndex, "CODE_DEPTH_GP");
+					if (["G10","G90"].includes(codeDepthGp)) {
+						arrCodeDepthGp.push(codeDepthGp);
+					}
+				});
+			}
+			if (arrCodeDepthGp.length < 2) {
+				obj["RESULT"] = true;
+				obj["MESSAGE"] = "[기초연구 및 계획수립/과제 완료]단계는 반드시 추가되어야 합니다.";
+				return obj;
+			}
+		}	
+	}
+		
+	return obj;
+}
+
+/************************************************
+ * 미체크된 변경된 특정 행의 데이터복구
+ ************************************************/
+function f_revertRowData() {
+	var gridId = app.lookup("grd1");
+	
+	for (var rowIndex = 0; rowIndex < gridId.getRowCount(); rowIndex++) {
+		if (!gridId.isCheckedRow(rowIndex)) {
+			gridId.revertRowData(rowIndex);
+		}
+	}
+}
+
+/************************************************
+ * 계획시작/종료일자체크
+ ************************************************/
+function f_checkDuration() {
+	var retVal = { "RESULT" : false };
+	var gridId = app.lookup("grd1");
+	
+	for (var rowIndex = 0; rowIndex < gridId.getRowCount(); rowIndex++) {
+		var planStartDate = gridId.getCellValue(rowIndex, "PLAN_START_DATE_M").toString().substr(0, 8);
+		var planEndDate = gridId.getCellValue(rowIndex, "PLAN_END_DATE_M").toString().substr(0, 8);
+		var depthNm = gridId.getCellValue(rowIndex, "DEPTH_NM");
+		var cellIndex = gridId.detail.getColumnByName("CODE_DEPTH_GP")[0].cellIndex;
+		var cmbLabel = gridId.getCellText(rowIndex, cellIndex);
+		
+		depthNm = ValueUtil.isNull(depthNm) ? cmbLabel : depthNm;
+
+		if (ValueUtil.isNull(planStartDate)) {
+			retVal["RESULT"] =  true;
+			retVal["MESSAGE"] =  "[" + depthNm + "] 단계의 시작일자를 입력하십시오.";
+			return retVal;
+		}
+		else if (ValueUtil.isNull(planEndDate)) {
+			retVal["RESULT"] =  true;
+			retVal["MESSAGE"] =  "[" + depthNm + "] 단계의 종료일자를 입력하십시오.";
+			return retVal;
+		}
+		else if (planStartDate > planEndDate) {
+			retVal["RESULT"] =  true;
+			retVal["MESSAGE"] =  "[" + depthNm + "] 단계의 종료일자가 시작일자보다 커야합니다.";
+			return retVal;
+		}
+	}
+	
+	return retVal;
+}
+
+/************************************************
+ * 계획시작/종료일자체크(과제기간에 포함여부)
+ ************************************************/
+function f_checkDuration2() {
+	var retVal = { "RESULT" : false };
+	var taskStartDate = dmTaskBaseInfo.getValue("TASK_START_DATE").toString().substr(0, 8);
+	var taskEndDate = dmTaskBaseInfo.getValue("TASK_END_DATE").toString().substr(0, 8);
+	
+	var gridId = app.lookup("grd1");
+	
+	for (var rowIndex = 0; rowIndex < gridId.getRowCount(); rowIndex++) {
+		var planStartDate = gridId.getCellValue(rowIndex, "PLAN_START_DATE_M").toString().substr(0, 8);
+		var planEndDate = gridId.getCellValue(rowIndex, "PLAN_END_DATE_M").toString().substr(0, 8);
+		var depthNm = gridId.getCellValue(rowIndex, "DEPTH_NM");
+		var cellIndex = gridId.detail.getColumnByName("CODE_DEPTH_GP")[0].cellIndex;
+		var cmbLabel = gridId.getCellText(rowIndex, cellIndex);
+		
+		depthNm = ValueUtil.isNull(depthNm) ? cmbLabel : depthNm;
+		
+		var stf = (taskStartDate > planStartDate) ? false : true;
+		var etf = (taskEndDate < planEndDate) ? false : true;
+		
+		if (!(stf && etf)) {
+			retVal["RESULT"] =  true;
+			retVal["MESSAGE"] =  "[" + depthNm + "] 단계의 기간은\n과제기간 범위내에 있어야 합니다.";
+			return retVal;
+		}
+	}
+	
+	return retVal;
+}
+
+/************************************************
+ * 단계별 시작일자가 이전단계의 종료일자와 중복여부체크
+ ************************************************/
+function f_checkDuration3() {
+	var retVal = { "RESULT" : false };
+	var taskEndDate = "";
+	var gridId = app.lookup("grd1");
+	
+	for (var rowIndex = 0; rowIndex < gridId.getRowCount(); rowIndex++) {
+		var planStartDate = gridId.getCellValue(rowIndex, "PLAN_START_DATE_M").toString().substr(0, 8);
+		var planEndDate = gridId.getCellValue(rowIndex, "PLAN_END_DATE_M").toString().substr(0, 8);
+		var depthNm = gridId.getCellValue(rowIndex, "DEPTH_NM");
+		var cellIndex = gridId.detail.getColumnByName("CODE_DEPTH_GP")[0].cellIndex;
+		var cmbLabel = gridId.getCellText(rowIndex, cellIndex);
+		
+		depthNm = ValueUtil.isNull(depthNm) ? cmbLabel : depthNm;
+		
+		if (rowIndex > 0) {
+			if (taskEndDate >= planStartDate) {
+				retVal["RESULT"] =  true;
+				retVal["MESSAGE"] =  "[" + depthNm + "] 단계의 시작일자는\n이전단계의 종료일자 보다 커야 합니다.";
+				return retVal;
+			}
+		}
+		
+		taskEndDate = planEndDate;
+	}
+	
+	return retVal;
+}
+
+/************************************************
+ * 단계별 일자가 전체 시작일과 종료일 사이 체크
+ ************************************************/
+function f_checkDuration4() {
+	var retVal = { "RESULT" : false };
+	
+	var gridId = app.lookup("grd1");
+		
+	var taskStartDate = gridId.getCellValue(0, "PLAN_START_DATE_M").toString().substr(0, 8);
+	var taskEndDate = gridId.getCellValue(gridId.getRowCount()-1, "PLAN_END_DATE_M").toString().substr(0, 8);
+	
+	for (var rowIndex = 0; rowIndex < gridId.getRowCount(); rowIndex++) {
+		var planStartDate = gridId.getCellValue(rowIndex, "PLAN_START_DATE_M").toString().substr(0, 8);
+		var planEndDate = gridId.getCellValue(rowIndex, "PLAN_END_DATE_M").toString().substr(0, 8);
+		var depthNm = gridId.getCellValue(rowIndex, "DEPTH_NM");
+		var cellIndex = gridId.detail.getColumnByName("CODE_DEPTH_GP")[0].cellIndex;
+		var cmbLabel = gridId.getCellText(rowIndex, cellIndex);
+		
+		depthNm = ValueUtil.isNull(depthNm) ? cmbLabel : depthNm;
+		
+		if (rowIndex > 0) {
+			if (taskStartDate > planStartDate) {
+				retVal["RESULT"] =  true;
+				retVal["MESSAGE"] =  "[" + depthNm + "] 단계의 시작일자는\n첫단계의 시작일자 보다 같거나 커야 합니다.";
+				return retVal;
+			}
+		}
+		
+		if (rowIndex > 0) {
+			if (taskEndDate < planEndDate) {
+				retVal["RESULT"] =  true;
+				retVal["MESSAGE"] =  "[" + depthNm + "] 단계의 종료일자는\n마지막단계의 종료일자 보다 같거나 작아야 합니다.";
+				return retVal;
+			}
+		}		
+	}
+	
+	return retVal;
+}
+
+/************************************************
+ * 서브미션에 사용할 값설정
+ ************************************************/
+function f_setSubmit(separator) {
+	var obj = {};
+	obj["SEPARATOR"] = separator;
+	obj["SUBMIT"] = "subSaveWbsTaskInfo";
+	
+	if (separator == "SAVE") {
+		obj["MESSAGE"] = "저장 하시겠습니까?";
+		
+		dmParam.setValue("PROG_STAT", "");
+		dmParam.setValue("TASK_DEPTH_STAT", "");
+	}
+	else if (separator == "APPR") {
+		obj["MESSAGE"] = "생성요청 하시겠습니까?";
+
+		dmParam.setValue("PROG_STAT", "B");
+		dmParam.setValue("TASK_DEPTH_STAT", "B");
+	}
+	else {
+		obj["SUBMIT"] = "subUpdateWbsTaskDepth";
+		obj["MESSAGE"] = "저장 하시겠습니까?";
+		var modId = dmParam.getValue("APP_ID");
+		modId = modId.toString().concat("MOD");
+		dmParam.setValue("APP_ID", modId);
+	}
+	dmParam.setValue("SEPARATOR", separator);
+	
+	return obj;
+}
+
+/************************************************
+ * set Dataset for DML 
+ ************************************************/
+function f_makeDsList(ud_chk) {
+	var gridId = app.lookup("grd1");
+	var rowIndices = gridId.getCheckRowIndices();
+	var dsTaskWbsInfo = app.lookup("dsTaskWbsInfo");
+	var dsTaskWbsInfoTemp = app.lookup("dsTaskWbsInfoTemp");
+	var dsListItem = app.lookup("dsListItemSave");
+	var dsListDepth = app.lookup("dsListDepthSave");
+	var dsDepthGpTemp = app.lookup("dsDepthGpTemp");
+	var cdVal;
+	
+	if (rowIndices.length > 0) {
+		dsListItem.clearData();
+		rowIndices.forEach(function(rowIndex, index){
+			dsListItem.addRow();
+			dsListItem.setValue(index, "TASK_NO"        , gridId.getCellValue(rowIndex, "TASK_NO"));
+			dsListItem.setValue(index, "CODE_DEPTH_GP"  , gridId.getCellValue(rowIndex, "CODE_DEPTH_GP"));
+			dsListItem.setValue(index, "DEPTH_GP"       , gridId.getCellValue(rowIndex, "DEPTH_GP"));
+			dsListItem.setValue(index, "ITEM_CD"        , gridId.getCellValue(rowIndex, "ITEM_CD"));
+			dsListItem.setValue(index, "ITEM_NM"        , gridId.getCellValue(rowIndex, "ITEM_NM"));
+			dsListItem.setValue(index, "PLAN_START_DATE", gridId.getCellValue(rowIndex, "PLAN_START_DATE_M").toString().substr(0, 8));
+			dsListItem.setValue(index, "PLAN_END_DATE"  , gridId.getCellValue(rowIndex, "PLAN_END_DATE_M").toString().substr(0, 8));
+			dsListItem.setValue(index, "PLAN_PROG_RATE" , gridId.getCellValue(rowIndex, "PLAN_PROG_RATE_M"));
+			dsListItem.setValue(index, "COMM_GP"        , dmItemCd.getValue("COMM_GP"));
+			dsListItem.setValue(index, "ATT_USER_ID"    , gridId.getCellValue(rowIndex, "ATT_USER_ID"));
+		});
+	}
+
+	dsListDepth.clearData();
+	if(ud_chk == "U") { // insert. update
+		var depthGpTemp = "";
+		var depthGp = "";
+		dsDepthGpTemp.clearData();
+		var kk = 0;
+		for(var ii = 0; ii < gridId.getRowCount(); ii++) {
+			depthGp = gridId.getCellValue(ii, "DEPTH_GP");
+			if(depthGpTemp != depthGp) {
+				dsDepthGpTemp.addRow();
+				dsDepthGpTemp.setValue(kk, "CD_VAL", depthGp);
+				depthGpTemp = depthGp;
+				kk++;
+			}
+		}
+		
+		var rowIndex = 0;
+		for(var ii = 0; ii < dsDepthGpTemp.getRowCount(); ii++) {
+			cdVal = dsDepthGpTemp.getValue(ii, "CD_VAL");
+			gridId.setFilter("DEPTH_GP == '" + cdVal + "'");
+			
+			dsListDepth.addRow();
+			dsListDepth.setValue(rowIndex, "TASK_NO",              gridId.dataSet.getMax("TASK_NO"));
+			dsListDepth.setValue(rowIndex, "CODE_DEPTH_GP",        gridId.dataSet.getMax("CODE_DEPTH_GP")); 
+			dsListDepth.setValue(rowIndex, "DEPTH_GP",             cdVal); 
+			dsListDepth.setValue(rowIndex, "DEPTH_NM",             gridId.dataSet.getMax("DEPTH_NM"));
+			dsListDepth.setValue(rowIndex, "CHARGER_ID",           gridId.dataSet.getMax("CHARGER_ID"));
+			dsListDepth.setValue(rowIndex, "DEPT_CD",              gridId.dataSet.getMax("DEPT_CD"));
+			dsListDepth.setValue(rowIndex, "PLAN_START_DATE",      gridId.dataSet.getMin("PLAN_START_DATE_M").toString().substr(0, 8));
+			dsListDepth.setValue(rowIndex, "PLAN_END_DATE",        gridId.dataSet.getMax("PLAN_END_DATE_M").toString().substr(0, 8));
+			dsListDepth.setValue(rowIndex, "PLAN_PROG_RATE",       gridId.dataSet.getSum("PLAN_PROG_RATE_M"));
+			dsListDepth.setValue(rowIndex, "YY_GP",                gridId.dataSet.getMax("YY_GP"));
+			dsListDepth.setValue(rowIndex, "GATE_SET_YN_PMO",      gridId.dataSet.getMax("GATE_SET_YN_PMO"));
+			dsListDepth.setValue(rowIndex, "GATE_SET_ID_PMO",      gridId.dataSet.getMax("GATE_SET_ID_PMO"));
+			dsListDepth.setValue(rowIndex, "GATE_CHK_COMMENT_PMO", gridId.dataSet.getMax("GATE_CHK_COMMENT_PMO"));
+			dsListDepth.setValue(rowIndex, "GATE_SET_YN",          gridId.dataSet.getMax("GATE_SET_YN"));
+			dsListDepth.setValue(rowIndex, "GATE_SET_ID",          gridId.dataSet.getMax("GATE_SET_ID"));
+			dsListDepth.setValue(rowIndex, "GATE_CHK_COMMENT",     gridId.dataSet.getMax("GATE_CHK_COMMENT"));
+			rowIndex++;
+		}
+	} else { // delete
+		// 삭제 check된거 제외
+		dsTaskWbsInfoTemp.clearData();
+		for (var rowIndex = 0; rowIndex < gridId.getRowCount(); rowIndex++) {
+			if(gridId.isCheckedRow(rowIndex)) 
+				gridId.setCellValue(rowIndex, "CHECK_YN", "Y");
+		}
+		
+		dsTaskWbsInfo.copyToDataSet(dsTaskWbsInfoTemp, "CHECK_YN != 'Y'");	
+	
+		var depthGpTemp = "";
+		var depthGp = "";
+		dsDepthGpTemp.clearData();
+		var kk = 0;
+		for(var ii = 0; ii < dsTaskWbsInfoTemp.getRowCount(); ii++) {
+			depthGp = dsTaskWbsInfoTemp.getValue(ii, "DEPTH_GP");
+			if(depthGpTemp != depthGp) {
+				dsDepthGpTemp.addRow();
+				dsDepthGpTemp.setValue(kk, "CD_VAL", depthGp);
+				depthGpTemp = depthGp;
+				kk++;
+			}
+		}
+		
+		var rowIndex = 0;	
+		for(var ii = 0; ii < dsDepthGpTemp.getRowCount(); ii++) {
+			cdVal = dsDepthGpTemp.getValue(ii, "CD_VAL");
+			dsTaskWbsInfoTemp.setFilter("DEPTH_GP == '" + cdVal + "'");
+			
+			dsListDepth.addRow();
+			dsListDepth.setValue(rowIndex, "TASK_NO",              dsTaskWbsInfoTemp.getMin("TASK_NO"));
+			dsListDepth.setValue(rowIndex, "CODE_DEPTH_GP",        dsTaskWbsInfoTemp.getMax("CODE_DEPTH_GP")); 
+			dsListDepth.setValue(rowIndex, "DEPTH_GP",             cdVal); 
+			dsListDepth.setValue(rowIndex, "DEPTH_NM",             dsTaskWbsInfoTemp.getMax("DEPTH_NM"));
+			dsListDepth.setValue(rowIndex, "CHARGER_ID",           dsTaskWbsInfoTemp.getMax("CHARGER_ID"));
+			dsListDepth.setValue(rowIndex, "DEPT_CD",              dsTaskWbsInfoTemp.getMax("DEPT_CD"));
+			dsListDepth.setValue(rowIndex, "PLAN_START_DATE",      dsTaskWbsInfoTemp.getMin("PLAN_START_DATE_M"));
+			dsListDepth.setValue(rowIndex, "PLAN_END_DATE",        dsTaskWbsInfoTemp.getMax("PLAN_END_DATE_M"));
+			dsListDepth.setValue(rowIndex, "PLAN_PROG_RATE",       dsTaskWbsInfoTemp.getSum("PLAN_PROG_RATE_M"));
+			dsListDepth.setValue(rowIndex, "YY_GP",                dsTaskWbsInfoTemp.getMax("YY_GP"));
+			dsListDepth.setValue(rowIndex, "GATE_SET_YN_PMO",      dsTaskWbsInfoTemp.getMax("GATE_SET_YN_PMO"));
+			dsListDepth.setValue(rowIndex, "GATE_SET_ID_PMO",      dsTaskWbsInfoTemp.getMax("GATE_SET_ID_PMO"));
+			dsListDepth.setValue(rowIndex, "GATE_CHK_COMMENT_PMO", dsTaskWbsInfoTemp.getMax("GATE_CHK_COMMENT_PMO"));
+			dsListDepth.setValue(rowIndex, "GATE_SET_YN",          dsTaskWbsInfoTemp.getMax("GATE_SET_YN"));
+			dsListDepth.setValue(rowIndex, "GATE_SET_ID",          dsTaskWbsInfoTemp.getMax("GATE_SET_ID"));
+			dsListDepth.setValue(rowIndex, "GATE_CHK_COMMENT",     dsTaskWbsInfoTemp.getMax("GATE_CHK_COMMENT"));
+			rowIndex++;
+		}	
+	}
+	
+	gridId.clearFilter();
+}
+
+/************************************************
+ * 데이터저장/삭제
+ ************************************************/
+function f_doDML(obj) {
+	RpmsUtil.confirm(app, "", [ obj["MESSAGE"] ], function(rtnVal){
+		if (rtnVal) {
+			// save(insert / update)
+			f_doSubmit(obj);
+		}
+	});
+}
+
+/************************************************
+ * 데이터저장/삭제
+ ************************************************/
+function f_doSubmit(obj) {
+	dmParam.setValue("RESULT_CD", "");
+	dmParam.setValue("RESULT_MSG", "");
+		
+	util.Submit.send(app, obj["SUBMIT"], null, function(subSuccess){
+		if (subSuccess) {
+			
+			var resultCd  = dmParam.getValue("RESULT_CD");
+			var resultMsg = dmParam.getValue("RESULT_MSG");
+			
+			if (resultCd == "FAIL") {
+				RpmsUtil.alert(app, resultMsg, function(e){}, 'warn'); 	// success / warn / error
+				return;
+			}
+			else {
+				RpmsUtil.alert(app, ValueUtil.isNull( obj["RSLT_MSG"] ) ? "정상적으로 처리되었습니다." : obj["RSLT_MSG"], function(e){
+					app.lookup("dsListItemSave").clearData();
+					app.lookup("btnSearch").click();
+					if (dmParam.getValue("SEPARATOR") == "APPR") {
+						app.close();
+					}
+				}, 'success');
+			}
+		}
+	});
+} 
+
+/************************************************
+ * 행추가
+ * 행추가시 과제번호는 설정하지 않는다. 
+ * 이는 행삭제시에 과제번호가 없는 것은 revert()를 이용하여 clear하기 위함이다.
+ ************************************************/
+function onBtnInsertRowClick(e){
+	var btnInsertRow = e.control;
+	
+ 	var gridId = app.lookup("grd1");
+ 	var rowIndex = gridId.getSelectedRowIndex();
+ 	rowIndex = rowIndex < 0 ? 0 : rowIndex;
+	var rowCount = gridId.rowCount;
+
+	if (gridId.rowCount > 0 && rowIndex < (rowCount-1)) {
+		gridId.insertRow(rowIndex, true);
+		gridId.setCellValue(rowIndex+1, "CODE_DEPTH_GP", gridId.getCellValue(rowIndex, "CODE_DEPTH_GP"));
+		gridId.setCellValue(rowIndex+1, "DEPTH_GP", gridId.getCellValue(rowIndex, "DEPTH_GP"));
+		gridId.setCellValue(rowIndex+1, "DEPTH_NM", gridId.getCellValue(rowIndex, "DEPTH_NM"));
+	}
+}
+
+/************************************************
+ * 행삭제
+ ************************************************/
+function onBtnDeleteRowClick(e){
+	var btnDeleteRow = e.control;
+
+	var gridId = app.lookup("grd1");
+	var rowIndices = gridId.getCheckRowIndices();
+	
+	if (rowIndices.length == 0) {
+		RpmsUtil.alert(app, "삭제할 항목을 선택하십시오.", function(e){	}, 'warn');
+		return;
+	}
+	
+	if (rowIndices.length > 0) {
+		// 과제번호 미발생 데이터 삭제시 해당내용을 클리어하고 나머지 건들에 대해서 삭제
+		rowIndices.reverse().forEach(function(rowIndex, index){
+			if (ValueUtil.isNull(gridId.getCellValue(rowIndex, "TASK_NO"))) {
+				gridId.revertRowData(rowIndex);
+			}
+		});
+	}
+
+	rowIndices = gridId.getCheckRowIndices();
+
+	if (rowIndices.length > 0) {
+		if(sACT_TASK_NO != "") {
+			// M10.Define, M60.완료는 삭제불가(M10은 1개만 있을 경우)
+			rowIndices.forEach(function(rowIndex, index){
+				var codeDepthGp = gridId.getCellValue(rowIndex, "CODE_DEPTH_GP");
+				if( codeDepthGp == "M10" ) {
+					gridId.setCheckRowIndex(rowIndex, false);
+				}
+				if ( codeDepthGp == "M60" ) {
+					gridId.setCheckRowIndex(rowIndex, false);
+				}
+			});
+		} else {
+			// G10.착수, G90.완료는 삭제불가(G10은 1개만 있을 경우)
+			rowIndices.forEach(function(rowIndex, index){
+				var codeDepthGp = gridId.getCellValue(rowIndex, "CODE_DEPTH_GP");
+				if( codeDepthGp == "G10" ) {
+					gridId.setFilter("CODE_DEPTH_GP == 'G10'");
+					if(gridId.getRowCount() >= 1) {
+						gridId.setCheckRowIndex(0, false);
+					}
+					gridId.clearFilter();
+				}
+				if ( codeDepthGp == "G90" ) {
+					gridId.setCheckRowIndex(rowIndex, false);
+				}
+			});
+		}	
+	}
+
+	rowIndices = gridId.getCheckRowIndices();
+
+	if (rowIndices.length > 0) {
+		f_makeDsList("D");
+
+		var obj = {
+			"MESSAGE" : "삭제 하시겠습니까?",
+			"SUBMIT" : "subDeleteWbsTaskInfo",
+		};
+		
+		f_doDML(obj);
+	}
+}
+
+/************************************************
+ * 선택항목값 확인
+ ************************************************/
+function f_checkDelList(rowIndices) {
+	var ret = false;
+	var gridId = app.lookup("grd1");
+	
+	if(sACT_TASK_NO != "") {
+		rowIndices.forEach(function(rowIndex, index){
+			var depthGp = gridId.getCellValue(rowIndex, "CODE_DEPTH_GP");
+			if ( depthGp == "M10" || depthGp == "M60" ) {
+				ret = true;
+			}
+		});
+	} else {	
+		rowIndices.forEach(function(rowIndex, index){
+			var depthGp = gridId.getCellValue(rowIndex, "CODE_DEPTH_GP");
+			if ( depthGp == "G10" || depthGp == "G90" ) {
+				ret = true;
+			}
+		});
+	}	
+	
+	return ret;
+}
+
+/************************************************
+ * Grid 내부 변경 시 발생하는 이벤트
+ * 값의 변화가 있는 경우 checkbox: true
+ * 값의 변화가 없는 경우 checkbox: false
+ ************************************************/
+function onGrd1Update(e){
+	var grd1 = e.control;
+
+	doUpdate(e);
+}
+
+function doUpdate(e) {
+	var gridId = e.control;
+
+	var rowState = gridId.getRowState(e.rowIndex);
+	
+	if (rowState == cpr.data.tabledata.RowState.UPDATED) {
+		gridId.setCheckRowIndex(e.rowIndex, true);
+	}
+	else if (rowState == cpr.data.tabledata.RowState.INSERTED) {
+		gridId.setCheckRowIndex(e.rowIndex, true);
+	}
+	else {
+		gridId.setCheckRowIndex(e.rowIndex, false);
+	} 
+}
+
+/************************************************
+ * 단계(콤보박스)선택시 첫번째와 마지막은 선택할 수 없도록 한다. 
+ ************************************************/
+function onCmbDepthGpClick(e){
+	var cmbDepthGp = e.control;
+	
+	// InsertOnly처리
+	f_setReadOnlyGridItem(cmbDepthGp);
+}
+
+/************************************************
+ * GridItem(InsertOnly처리)
+ ************************************************/
+function f_setReadOnlyGridItem(cmbDepthGp) {
+	
+	var gridId = app.lookup("grd1");
+	var rowIndex = gridId.getSelectedRowIndex();
+	var rowState = gridId.getRowState(rowIndex);
+	
+	cmbDepthGp.readOnly = (rowState != cpr.data.tabledata.RowState.INSERTED) ? true : false;
+}
+
+/************************************************
+ * 콤보선택item set
+ ************************************************/
+function f_setEnabledItemExp(cmbDepthGp) {
+	
+	if (cmbDepthGp.value == "G10" || cmbDepthGp.value == "G90") {
+		cmbDepthGp.enabledItemExp = "(CD_VAL == '') ? true : false";
+	}
+	else {
+		cmbDepthGp.enabledItemExp = "(CD_VAL == 'G10' || CD_VAL == 'G90') ? false : true";
+	}
+}
+
+/************************************************
+ * 그리드에서 cell-click 이벤트 발생 시: 사용안함 => f_setReadOnlyGridItem 대체
+ * 과제번호가 존재하면 단계를 수정불가처리
+ ************************************************/
+function onGrd1CellClick(e){
+	var grd1 = e.control;
+	var rowIndex = e.rowIndex;
+	var taskNo = grd1.getCellValue(rowIndex, "TASK_NO");
+	
+	var cmbDepthGp = app.lookup("cmbDepthGp");
+	if (!ValueUtil.isNull(taskNo)) {
+		cmbDepthGp.readOnly = true;
+	}
+	else {
+		cmbDepthGp.readOnly = false;
+	}
+}
+
+/************************************************
+ * 과제변경 페이지에서 임베디드앱을 통해 호출된경우
+ ************************************************/
+exports.calledEmbededPage = function calledEmbededPage(args) {
+
+	var initValue = args;
+	if (!ValueUtil.isNull(initValue.TASK_NO)) {
+		var header = app.lookup("header");
+		var body = app.lookup("body");
+		
+		// 화면 상단 제목 버튼 보이지 않게 처리
+		app.lookup("header").visible = false;
+		util.Control.updateConstraint(app, "header", null, {height: "0px"}); 
+		util.Control.updateConstraint(app, "body", null, {top: "0px"});
+		
+		// 조회파라미터세팅
+		var dmParam = app.lookup("dmParam");
+		dmParam.setValue("TASK_NO", initValue.TASK_NO);
+		dmParam.setValue("TASK_NM", initValue.TASK_NM);
+		dmParam.setValue("TASK_TYPE", initValue.TASK_TYPE);
+		
+		app.lookup("ipbTaskNo").value = initValue.TASK_NO;
+		app.lookup("ipbTaskNm").value = initValue.TASK_NM;
+		
+		if (!ValueUtil.isNull(initValue.TASK_TYPE_GQ)) {
+			app.lookup("ipbTaskType").value = initValue.TASK_TYPE_GQ;
+		} else {
+			app.lookup("ipbTaskType").value = initValue["TASK_TYPE"];
+		}
+		
+		// 조회
+		app.lookup("btnSearch").click();
+	}	
+}
+
+/************************************************
+ * 임시저장 - 과제변경 페이지에서 임베디드앱을 통해 호출된경우
+ ************************************************/
+exports.calledEmbededSave = function calledEmbededSave() {
+	
+	// 변경사항발생시 +1증가
+	var changeCnt = 0;
+	
+	// WBS설정 변경사항 체크
+	var dsTaskWbsInfo = app.lookup("dsTaskWbsInfo");
+	for(var i=0; i<dsTaskWbsInfo.getRowCount(); i++) {
+		var rowStatus = dsTaskWbsInfo.getRowState(i);
+		if(rowStatus != cpr.data.tabledata.RowState.UNCHANGED) {
+			changeCnt++;	
+		}
+	}
+	
+	// WBS설정 변경 되었을때
+	if(changeCnt > 0) {
+		var modContents = modContents + ",WBS설정";
+	}
+	
+	// 변경항목세팅
+	var dmParam = app.getHostAppInstance().lookup("dmParam");
+	var preModContents = dmParam.getValue("MOD_CONTENTS");
+	
+	if (!ValueUtil.isNull(preModContents) && preModContents != "undefined") {
+		modContents = preModContents +","+modContents;
+	}
+	
+	dmParam.setValue("MOD_CONTENTS", modContents);
+	doSave("MOD");
+}
+
+/************************************************
+ * 분류/수행항목 서치인풋
+ ************************************************/
+function onSipItemCdSearch(e){
+	var sipGridItemCd = e.control;
+
+	var gridId = app.lookup("grd1");
+	var rowIndex = gridId.getSelectedRowIndex();
+
+	//신규등록시 저장이전이라면 그리드에 과제번호가 없으므로 넘겨받은 과제번호를 적용한다.
+	var taskNo = dmParam.getValue("TASK_NO");
+	var depthGp = gridId.getCellValue(rowIndex, "CODE_DEPTH_GP");
+	
+	var initValue = {
+		"TASK_NO" : taskNo,
+		"DEPTH_GP" : depthGp,
+		"ROW_INDEX" : rowIndex,
+	};
+	
+	f_openPopup(initValue);
+}
+
+/************************************************
+ * set Dataset
+ ************************************************/
+function f_openPopup(initValue) {
+	var url = "app/rpms/project/TaskClassItemPpNew";
+
+	util.Dialog.open(app, url, 700, 510, function(/** @type cpr.events.CUIEvent */e) {
+		var dialog = e.control;
+		var returnValue = dialog.returnValue;
+		
+		if (!ValueUtil.isNull(returnValue)) {
+			if (!ValueUtil.isNull(returnValue["ITEM_CD"])) {
+				var gridId = app.lookup("grd1");
+				gridId.setCellValue(initValue["ROW_INDEX"], "ITEM_CD"	, returnValue["ITEM_CD"]);
+				gridId.setCellValue(initValue["ROW_INDEX"], "ITEM_NM"	, returnValue["ITEM_NM"]);
+			}
+		}
+		
+	}, initValue);
+	
+}
+
+/************************************************
+ * 참여인력 서치인풋
+ ************************************************/
+function onSipGridUserNmSearch(e){
+	var sipGridUserNm = e.control;
+	
+	var gridId = app.lookup("grd1");
+	var rowIndex = gridId.getSelectedRowIndex();
+
+	dmParam.setValue("DEPTH_GP", app.lookup("dsTaskWbsInfo").getValue(rowIndex, "DEPTH_GP"));
+	dmParam.setValue("ITEM_CD", app.lookup("dsTaskWbsInfo").getValue(rowIndex, "ITEM_CD"));
+	util.Submit.send(app, "subGetUserNmInfo", null, function(subSuccess){
+		if (subSuccess) {
+			var initValue = {
+				"DATASET" : app.lookup("dsTASK_ATT_TNOP"),
+				"PREFIX" : "ATT",
+				"ROW_INDEX" : rowIndex,
+			};
+			
+			// 참여인원 dataset  
+			f_setDataSetTnop(initValue);
+		}
+	});
+}
+
+/************************************************
+ * set Dataset
+ ************************************************/
+function f_setDataSetTnop(initValue) {
+	var url = "app/rpms/project/TaskAttTnopDialog";
+
+	util.Dialog.open(app, url, 700, 505, function(/** @type cpr.events.CUIEvent */e) {
+		var dialog = e.control;
+		var returnValue = dialog.returnValue;
+
+		if (!ValueUtil.isNull(returnValue)) {
+			var dataset = returnValue["DATASET_D"];
+			initValue["DATASET"].clearData();
+
+			for (var rowIndex = 0; rowIndex < dataset.getRowCount(); rowIndex++) {
+				initValue["DATASET"].addRow();
+				initValue["DATASET"].setValue(rowIndex, initValue["PREFIX"] + "_USER_ID", dataset.getValue(rowIndex, "USER_ID"));
+				initValue["DATASET"].setValue(rowIndex, "USER_NM", dataset.getValue(rowIndex, "USER_NM"));
+				initValue["DATASET"].setValue(rowIndex, "DEPT_CD", dataset.getValue(rowIndex, "DEPT_CD"));
+				initValue["DATASET"].setValue(rowIndex, "DEPT_NM", dataset.getValue(rowIndex, "DEPT_NM"));
+				initValue["DATASET"].setValue(rowIndex, "JOBGRADE_CD", dataset.getValue(rowIndex, "JOBGRADE_CD"));
+				initValue["DATASET"].setValue(rowIndex, "JOBGRADE_NM", dataset.getValue(rowIndex, "JOBGRADE_NM"));
+				initValue["DATASET"].setValue(rowIndex, "ROLE_CD", dataset.getValue(rowIndex, "ROLE_CD"));
+				initValue["DATASET"].setValue(rowIndex, "ROLE_NM", dataset.getValue(rowIndex, "ROLE_NM"));
+			}
+
+			// 참여인원이름 가지고오기
+			var gridId = app.lookup("grd1");
+			var arrUserNm = f_getDatasetValue(initValue["DATASET"], "USER_NM");
+			gridId.setCellValue(initValue["ROW_INDEX"], "ATT_USER_NM", arrUserNm.sort().join(", "));
+			var arrUserId = f_getDatasetValue(initValue["DATASET"], "ATT_USER_ID");
+			gridId.setCellValue(initValue["ROW_INDEX"], "ATT_USER_ID", arrUserId.sort().join(", "));
+		}
+		
+	}, initValue);
+}
+
+/************************************************
+ * 참여인원ID / 참여인원이름 가지고오기
+ ************************************************/
+function f_getDatasetValue(dataset, columnName) {
+ 	var arrUser = [];
+	for (var rowIndex = 0; rowIndex < dataset.getRowCount(); rowIndex++) {
+		arrUser.push(dataset.getValue(rowIndex, columnName));
+	}
+	
+	return arrUser;
+}
+
+/*
+ * "단계추가" 버튼(btnStep)에서 click 이벤트 발생 시 호출.
+ * 사용자가 컨트롤을 클릭할 때 발생하는 이벤트.
+ */
+function onBtnStepClick(e){
+	var btnStep = e.control;
+	
+ 	var gridId = app.lookup("grd1");
+ 	var rowIndex = gridId.getSelectedRowIndex();
+ 	rowIndex = rowIndex < 0 ? 0 : rowIndex;
+	var rowCount = gridId.rowCount;
+	var maxDepthGp;
+				 
+	if(sACT_TASK_NO != "") {
+		var depthGp1 = gridId.getCellValue(rowIndex, "DEPTH_GP").toString().substring(0, 3);
+		if(depthGp1 == "M60") {
+			RpmsUtil.alert(app, "완료보고 단계에서는 단계를 추가할 수 없습니다.", function(e){	}, 'warn');
+			return;
+		}
+		var depthGp2;
+		if (rowCount > 0) {
+			for(var ii = (rowCount-1); ii >= 0; ii--) {
+				depthGp2 = gridId.getCellValue(ii, "DEPTH_GP").toString().substring(0, 3); 
+				if(depthGp1 == depthGp2) {
+					maxDepthGp = gridId.getCellValue(ii, "DEPTH_GP");
+					rowIndex = ii;
+					break;
+				}
+			} 
+			
+			if(maxDepthGp.toString().length == 3) {
+				maxDepthGp = maxDepthGp + "_1";
+			} else {
+				var lastNumber = parseInt(maxDepthGp.toString().substring(4), 10) + 1;
+				maxDepthGp = maxDepthGp.toString().substring(0, 4) + lastNumber;
+			}
+			
+			gridId.insertRow(rowIndex, true);
+			rowIndex++;	
+			gridId.setCellValue(rowIndex, "CODE_DEPTH_GP", depthGp1);
+			gridId.setCellValue(rowIndex, "DEPTH_GP", maxDepthGp);
+			gridId.setCellValue(rowIndex, "DEPTH_NM", gridId.getCellValue(rowIndex-1, "DEPTH_NM"));
+		}
+		else {
+			var rowIndex = 0;
+			for(var ii = 0; ii < dsDepthGp.getRowCount(); ii++) {
+				gridId.insertRow(rowIndex, true);
+				gridId.setCellValue(rowIndex, "CODE_DEPTH_GP", dsDepthGp.getValue(ii, "CD_VAL"));
+				gridId.setCellValue(rowIndex, "DEPTH_GP", dsDepthGp.getValue(ii, "CD_VAL"));
+				gridId.setCellValue(rowIndex, "DEPTH_NM", dsDepthGp.getValue(ii, "CD_MNNG"));
+				rowIndex++;
+			}	
+		}
+	} else {
+		var depthGp1 = gridId.getCellValue(rowIndex, "DEPTH_GP").toString().substring(0, 3);
+		if(depthGp1 == "G90") {
+			RpmsUtil.alert(app, "과제완료 단계에서는 단계를 추가할 수 없습니다.", function(e){	}, 'warn');
+			return;
+		}
+		var depthGp2;
+		if (rowCount > 0) {
+			for(var ii = (rowCount-1); ii >= 0; ii--) {
+				depthGp2 = gridId.getCellValue(ii, "DEPTH_GP").toString().substring(0, 3); 
+				if(depthGp1 == depthGp2) {
+					maxDepthGp = gridId.getCellValue(ii, "DEPTH_GP");
+					rowIndex = ii;
+					break;
+				}
+			} 
+			
+			if(maxDepthGp.toString().length == 3) {
+				maxDepthGp = maxDepthGp + "_1";
+			} else {
+				var lastNumber = parseInt(maxDepthGp.toString().substring(4), 10) + 1;
+				maxDepthGp = maxDepthGp.toString().substring(0, 4) + lastNumber;
+			}
+			
+			var depthGp = gridId.getCellValue(rowIndex, "DEPTH_GP").toString().substring(0, 3);
+			dsItemCd.setFilter("DEPTH_GP == '" + depthGp + "' && ESSENTIAL_YN == 'Y'");
+			var itemCdRowCount = dsItemCd.getRowCount();
+			if(itemCdRowCount == 0) {
+				gridId.insertRow(rowIndex, true);
+				rowIndex++;	
+				gridId.setCellValue(rowIndex, "CODE_DEPTH_GP", depthGp1);
+				gridId.setCellValue(rowIndex, "DEPTH_GP", maxDepthGp);
+				gridId.setCellValue(rowIndex, "DEPTH_NM", gridId.getCellValue(rowIndex-1, "DEPTH_NM"));
+			} else {
+				for(var ii = 0; ii < itemCdRowCount; ii++) {
+					gridId.insertRow(rowIndex, true);
+					rowIndex++;	
+					gridId.setCellValue(rowIndex, "CODE_DEPTH_GP", dsItemCd.getValue(ii, "DEPTH_GP"));
+					gridId.setCellValue(rowIndex, "DEPTH_GP", maxDepthGp);
+					gridId.setCellValue(rowIndex, "DEPTH_NM", dsItemCd.getValue(ii, "DEPTH_NM"));
+					gridId.setCellValue(rowIndex, "ITEM_CD", dsItemCd.getValue(ii, "ITEM_CD"));
+					gridId.setCellValue(rowIndex, "ITEM_NM", dsItemCd.getValue(ii, "ITEM_NM"));
+				}
+			}
+			dsItemCd.clearFilter();
+		}
+		else {
+			var rowIndex = 0;
+			for(var ii = 0; ii < dsDepthGp.getRowCount(); ii++) {
+				var cdVal = dsDepthGp.getValue(ii, "CD_VAL");
+				dsItemCd.setFilter("DEPTH_GP == '" + cdVal + "' && ESSENTIAL_YN == 'Y'");
+				var itemCdRowCount = dsItemCd.getRowCount();
+				if(itemCdRowCount == 0) {
+					gridId.insertRow(rowIndex, true);
+					gridId.setCellValue(rowIndex, "CODE_DEPTH_GP", dsDepthGp.getValue(ii, "CD_VAL"));
+					gridId.setCellValue(rowIndex, "DEPTH_GP", dsDepthGp.getValue(ii, "CD_VAL"));
+					gridId.setCellValue(rowIndex, "DEPTH_NM", dsDepthGp.getValue(ii, "CD_MNNG"));
+					rowIndex++;
+				} else {
+					var itemCdRowCount = dsItemCd.getRowCount();
+					for(var jj = 0; jj < itemCdRowCount; jj++) {
+						gridId.insertRow(rowIndex, true);
+						gridId.setCellValue(rowIndex, "CODE_DEPTH_GP", dsDepthGp.getValue(ii, "CD_VAL"));
+						gridId.setCellValue(rowIndex, "DEPTH_GP", dsDepthGp.getValue(ii, "CD_VAL"));
+						gridId.setCellValue(rowIndex, "DEPTH_NM", dsDepthGp.getValue(ii, "CD_MNNG"));
+						gridId.setCellValue(rowIndex, "ITEM_CD", dsItemCd.getValue(jj, "ITEM_CD"));
+						gridId.setCellValue(rowIndex, "ITEM_NM", dsItemCd.getValue(jj, "ITEM_NM"));
+						rowIndex++;
+					}
+				}	
+			}
+			dsItemCd.clearFilter();
+		}
+	}
+ }
