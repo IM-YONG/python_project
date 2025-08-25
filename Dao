@@ -1,0 +1,221 @@
+package hds.tech.rpms.project.service.dao;
+
+import java.util.List;
+import java.util.Map;
+
+import com.cleopatra.protocol.data.DataRequest;
+import com.cleopatra.protocol.data.ParameterGroup;
+
+import hds.tech.rpms.common.mapper.Mapper;
+
+@Mapper("wbsMakeGenTaskDao")
+public interface WbsMakeGenTaskDao {
+
+	/**
+	 * WBS과제조회
+	 * @param paramMap
+	 * @return
+	 * @throws Exception
+	 */
+	List<Map<String, Object>> selectTaskWbsInfo(Map<String, String> paramMap) throws Exception;
+	
+	/**
+	 * WBS과제조회NEW
+	 * @param paramMap
+	 * @return
+	 * @throws Exception
+	 */
+	List<Map<String, Object>> selectTaskWbsInfoNew(Map<String, String> paramMap) throws Exception;
+	
+	/**
+	 * 과제참여인력조회
+	 * @param paramMap
+	 * @return
+	 * @throws Exception
+	 */
+	List<Map<String, Object>> selectUserNmInfo(Map<String, String> paramMap) throws Exception;
+	
+	/**
+	 * 과제 WBS 공통(검토) 저장
+	 * @param paramMap
+	 * @throws Exception
+	 */
+	void insertTaskWbs(Map<String, String> paramMap) throws Exception;
+
+	/**
+	 * 과제 WBS 공통(검토) 저장(NEW)
+	 * @param paramMap
+	 * @throws Exception
+	 */
+	void insertTaskWbsNew(Map<String, String> paramMap) throws Exception;
+
+	/**
+	 * 과제 WBS 단계 저장
+	 * @param paramMap
+	 * @return
+	 * @throws Exception
+	 */
+	void upsertTaskWbsDepth(Map<String, String> paramMap) throws Exception;
+
+	/**
+	 * 과제 WBS항목 저장
+	 * @param paramMap
+	 * @return
+	 * @throws Exception
+	 */
+	void upsertTaskWbsItem(Map<String, String> paramMap) throws Exception;
+	
+	/**
+	 * 과제 WBS항목 저장(NEW)
+	 * @param paramMap
+	 * @return
+	 * @throws Exception
+	 */
+	void upsertTaskWbsItemNew(Map<String, String> paramMap) throws Exception;
+	
+	/**
+	 * 과제 WBS 참여인원 저장(NEW)
+	 * @param paramMap
+	 * @return
+	 * @throws Exception
+	 */
+	void insertTaskWbsAttNew(Map<String, String> paramMap) throws Exception;
+	
+	/**
+	 * 과제 WBS참여인원 삭제(NEW)
+	 * @param paramMap
+	 * @return
+	 * @throws Exception
+	 */
+	void deleteTaskWbsAttNew(Map<String, String> paramMap) throws Exception;
+	
+	/**
+	 * 과제 WBS 삭제
+	 * @param paramMap
+	 * @return
+	 * @throws Exception
+	 */
+	void deleteTaskWbsDepth(Map<String, String> paramMap) throws Exception;
+
+	/**
+	 * 과제 WBS 삭제(NEW)
+	 * @param paramMap
+	 * @return
+	 * @throws Exception
+	 */
+	void deleteTaskWbsDepthNew(Map<String, String> paramMap) throws Exception;
+
+	/**
+	 * 과제 WBS항목 삭제
+	 * @param paramMap
+	 * @return
+	 * @throws Exception
+	 */
+	void deleteTaskWbsItem(Map<String, String> paramMap) throws Exception;
+	
+	/**
+	 * 과제 WBS항목 삭제(NEW)
+	 * @param paramMap
+	 * @return
+	 * @throws Exception
+	 */
+	void deleteTaskWbsItemNew(Map<String, String> paramMap) throws Exception;
+	
+	/**
+	 * 과제 WBS 등록(NEW)
+	 * @param paramMap
+	 * @return
+	 * @throws Exception
+	 */
+	void insertTaskWbsDepthNew(Map<String, String> paramMap) throws Exception;
+	
+	/**
+	 * 과제 WBS 단계 조회(단계데이터중복체크)
+	 * @param mapDup
+	 * @throws Exception
+	 */
+	List<Map<String, Object>> selectTaskWbsDepthNatlExists(Map<String, String> mapDup) throws Exception;
+	
+	Map<String, Object> selectTaskWbsDepthExists(Map<String, String> mapDup) throws Exception;
+
+	Map<String, Object> selectMaxTaskWbsDepth(Map<String, String> mapDup) throws Exception;
+
+	/**
+	 * 과제 WBS 단계 조회
+	 * @param paramMap
+	 * @throws Exception
+	 */
+	List<Map<String, Object>> selectTaskWbsDepth(Map<String, String> paramMap) throws Exception;
+
+	/**
+	 * 과제 단계구분 최대값 생성(퀵과제)
+	 * @param map
+	 * @return
+	 */
+	Map<String, Object> selectMaxDepthGp(Map<String, String> map) throws Exception;
+
+	/**
+	 * 과제 WBS 저장
+	 * @param map
+	 * @return
+	 */
+	void updateTaskWbs(Map<String, String> paramMap) throws Exception;
+
+	void updateTaskBaseInfoFields(Map<String, String> paramMap) throws Exception;
+
+	/**
+	 * 과제Gate설정용과제정보(PMO,TL공통)
+	 * @param paramMap
+	 * @return
+	 * @throws Exception
+	 */
+	List<Map<String, Object>> selectGatePMO(Map<String, String> paramMap) throws Exception;
+	List<Map<String, Object>> selectGateTL(Map<String, String> paramMap) throws Exception;
+	List<Map<String, Object>> selectTaskBaseInfoHeader(Map<String, String> paramMap) throws Exception;
+	
+	/**
+	 * 과제Gate설정저장(PMO,TL공통)
+	 * @param map
+	 */
+	void updateTaskWbsDepthGate(Map<String, String> map);
+
+	/**
+	 * 과제 WBS 단계(국책과제) 조회
+	 * @param paramMap
+	 * @throws Exception
+	 */
+	List<Map<String, Object>> selectTaskWbsNatl(Map<String, String> paramMap) throws Exception;
+
+	/**
+	 * 단계별분류항목조회
+	 * @param paramMap
+	 * @throws Exception
+	 */
+	List<Map<String, Object>> selectTaskClassItem(Map<String, String> paramMap) throws Exception;
+
+	/**
+	 * 단계별분류항목필수여부
+	 * @param paramMap
+	 * @throws Exception
+	 */
+	Map<String, Object> selectTaskWbsItemEssentialYn(Map<String, String> paramMap) throws Exception;
+	
+	/**
+	 * WBS수행항목코드조회
+	 * @param paramMap
+	 * @throws Exception
+	 */
+	List<Map<String, Object>> selectCommCd(Map<String, String> paramMap) throws Exception;
+
+	List<Map<String, Object>> selectTaskWbsItem(Map<String, String> paramMap) throws Exception;
+
+	void deleteTaskWbsItemPopup(Map<String, String> map) throws Exception;
+
+	List<Map<String, Object>> selectTaskWbsItemPopup(Map<String, String> paramMap) throws Exception;
+
+	List<Map<String, Object>> selectTaskWbsItemDefault(Map<String, String> paramMap) throws Exception;
+
+	List<Map<String, Object>> selectTaskWbsItemDefaultNew(Map<String, String> paramMap) throws Exception;
+
+	void updateWbsTaskDepth(Map<String, String> map) throws Exception;
+}
