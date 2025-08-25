@@ -1,0 +1,163 @@
+package hds.tech.rpms.project.service;
+
+import java.util.List;
+import java.util.Map;
+
+import com.cleopatra.protocol.data.DataRequest;
+
+public interface WbsMakeGenTaskService {
+
+	/**
+	 * 과제 WBS 조회
+	 * @param paramMap
+	 * @return
+	 * @throws Exception
+	 */
+	public List<Map<String, Object>> selectTaskWbsInfo(Map<String, String> paramMap) throws Exception;
+
+	/**
+	 * 과제 WBS 조회NEW
+	 * @param paramMap
+	 * @return
+	 * @throws Exception
+	 */
+	public List<Map<String, Object>> selectTaskWbsInfoNew(Map<String, String> paramMap) throws Exception;
+
+	/**
+	 * 과제참여인력조회
+	 * @param paramMap
+	 * @return
+	 * @throws Exception
+	 */
+	public List<Map<String, Object>> selectUserNmInfo(Map<String, String> paramMap) throws Exception;
+
+	/**
+	 * 과제 WBS (항목) 저장
+	 * @param dataRequest
+	 * @return
+	 * @throws Exception
+	 */
+	public Map<String, String> saveTaskWbsInfo(DataRequest dataRequest) throws Exception;
+
+	/**
+	 * 과제 WBS (항목) 저장(NEW)
+	 * @param dataRequest
+	 * @return
+	 * @throws Exception
+	 */
+	public Map<String, String> saveTaskWbsInfoNew(DataRequest dataRequest) throws Exception;
+
+	/**
+	 * 과제 WBS (항목) 삭제
+	 * @param dataRequest
+	 * @return
+	 * @throws Exception
+	 */
+	public Map<String, String> deleteTaskWbsDepthInfo(DataRequest dataRequest) throws Exception;
+
+	/**
+	 * 과제 WBS (항목) 삭제(NEW)
+	 * @param dataRequest
+	 * @return
+	 * @throws Exception
+	 */
+	public Map<String, String> deleteTaskWbsDepthInfoNew(DataRequest dataRequest) throws Exception;
+
+	/**
+	 * 과제 WBS 단계 조회
+	 * @param paramMap
+	 * @return
+	 * @throws Exception
+	 */
+	public List<Map<String, Object>> selectTaskWbsDepth(Map<String, String> paramMap) throws Exception;
+
+	/**
+	 * 과제 WBS 단계 저장(퀵과제)
+	 * @param dataRequest
+	 * @return
+	 * @throws Exception
+	 */
+	public Map<String, String> saveQukTaskDepth(DataRequest dataRequest) throws Exception;
+
+	/**
+	 * 과제 WBS 단계 저장(위탁,국책,기술,공통)
+	 * @param dataRequest
+	 * @return
+	 * @throws Exception
+	 */
+	public Map<String, String> saveCommTaskDepth(DataRequest dataRequest) throws Exception;
+
+	/**
+	 * 과제 WBS 단계 삭제
+	 * @param dataRequest
+	 * @return
+	 * @throws Exception
+	 */
+	public Map<String, String> deleteTaskWbsDepth(DataRequest dataRequest) throws Exception;
+
+	/**
+	 * 과제 WBS 생성요청
+	 * @param dataRequest
+	 * @return
+	 * @throws Exception
+	 */
+	public Map<String, String> approveTaskInfo(DataRequest dataRequest) throws Exception;
+	
+	/**
+	 * 과제Gate설정용과제정보(PMO,TL공통)
+	 * @param paramMap
+	 * @return
+	 * @throws Exception
+	 */
+	public List<Map<String, Object>> selectGatePMO(Map<String, String> paramMap) throws Exception;
+	public List<Map<String, Object>> selectGateTL(Map<String, String> paramMap) throws Exception;
+	public List<Map<String, Object>> selectTaskBaseInfoHeader(Map<String, String> paramMap) throws Exception;
+
+	/**
+	 * Gate설정(저장)
+	 * @param dataRequest
+	 * @return
+	 * @throws Exception
+	 */
+	public Map<String, String> saveGate(DataRequest dataRequest) throws Exception;
+
+	/**
+	 * 과제 WBS 단계(국책과제) 조회
+	 * @param paramMap
+	 * @return
+	 * @throws Exception
+	 */
+	public List<Map<String, Object>> selectTaskWbsNatl(Map<String, String> paramMap) throws Exception;
+
+	/**
+	 * 과제 WBS 단계(국책과제) 저장
+	 * @param paramMap
+	 * @return
+	 * @throws Exception
+	 */
+	public Map<String, String> saveTaskWbsNatl(DataRequest dataRequest) throws Exception;
+
+	/**
+	 * 단계별분류항목조회
+	 * @param paramMap
+	 * @return
+	 * @throws Exception
+	 */
+	public List<Map<String, Object>> selectCommCd(Map<String, String> paramMap) throws Exception;
+
+	
+	public List<Map<String, Object>> selectTaskWbsItem(Map<String, String> paramMap) throws Exception;
+
+	public Map<String, String> deleteTaskWbsItemPopup(DataRequest dataRequest) throws Exception;
+
+	public List<Map<String, Object>> selectTaskWbsItemPopup(Map<String, String> paramMap) throws Exception;
+
+	public List<Map<String, Object>> selectTaskWbsItemDefault(Map<String, String> paramMap) throws Exception;
+
+	public List<Map<String, Object>> selectTaskWbsItemDefaultNew(Map<String, String> paramMap) throws Exception;
+
+	public Map<String, String> updateWbsTaskDepth(DataRequest dataRequest) throws Exception;
+
+	public Map<String, String> updateWbsTaskDepthNew(DataRequest dataRequest) throws Exception;
+
+}
