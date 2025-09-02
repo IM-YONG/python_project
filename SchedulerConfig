@@ -1,0 +1,732 @@
+package hds.tech.rtms.common.config;
+
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.text.MessageFormat;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.EnableScheduling;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
+
+import hds.tech.rtms.appr.service.ApprMgtService;
+import hds.tech.rtms.common.util.CmmUtil;
+import hds.tech.rtms.common.util.MailSendUtil;
+import jakarta.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
+
+/**   
+*
+* @ClassName 	:	SchedulerConfig
+* @Description  :	스케쥴러 구현 클래스 
+* @author 		:	pyobeomhee   
+* @date 		:	2024-05-22    
+*    
+*/
+@Component
+@EnableScheduling
+@Slf4j
+public class SchedulerConfig {
+	
+	@Value("${spring.profiles.active}")
+	private String profile;
+	
+	@Resource(name="apprMgtService")
+	private ApprMgtService apprMgtService;
+	
+	/**
+     * 메일 자동발송 스케줄
+	 * fixedDelay는 (작업 수행 시간을 포함하여) 작업을 마친 후부터 주기 타이머가 돌아 메소드를 호출(밀리초)
+	 * fixedDelay=300000->5분, fixedDelay=60000->1분
+	 * @throws Exception 
+     */
+	@Scheduled(fixedDelay=60000)
+    public void mailAutoSendSchedule() throws Exception {
+		
+		// 로컬이 아닐때만 실행, 로컬에서는 메일발송안됨
+		if(!"local".equals(profile)) {
+		
+	        try (Connection conn = CmmUtil.getConnection(profile);){
+		        
+		        if(conn != null) {
+		        	String query = "SELECT REG_SEQNO"
+		        			     +"	     , MAIL_GP"
+		        			     +"	     , MAIL_RCV_ID"
+		        			     +"	     , MAIL_TITLE"
+		        			     +"	     , MAIL_CONTENTS"
+		        			     +"   FROM TB_CM_MAIL_SND"
+		        			     +"  WHERE SND_YN = ?";
+		        	
+		        	try (PreparedStatement pstmt = conn.prepareStatement(query);){
+		        		pstmt.setString(1, "N");
+		        		try (ResultSet rs = pstmt.executeQuery();){
+		        			while(rs.next()){
+		        				int seq = Integer.parseInt(rs.getString("REG_SEQNO"));
+		        				String toAddr = rs.getString("MAIL_RCV_ID");
+		        				String title = rs.getString("MAIL_TITLE");
+		        				String contents = rs.getString("MAIL_CONTENTS");
+		        				
+		        				if(!"".equals(toAddr)) {
+
+		        					// 운영계일때만 전송
+		        					if("prod".equals(profile)) {
+		        						MailSendUtil.sendMail(toAddr, "rtms@partners-steel.com", "R&D 시험/장비 관리 시스템", contents, title);
+		        					}
+		        					
+	        						String updateSql = "UPDATE TB_CM_MAIL_SND"
+			        								 +"	   SET SND_YN = ?"
+			        								 +"	     , MOD_ID = ?"
+			        								 +"	     , MOD_PGM = ?"
+			        								 +"	     , MOD_DDTT = SYSDATE()"
+			        								 +"  WHERE REG_SEQNO = ?";
+	        						try (PreparedStatement pstmt1 = conn.prepareStatement(updateSql);){
+	        							pstmt1.setString(1, "Y");
+	        							pstmt1.setString(2, "SYSTEM");
+	        							pstmt1.setString(3, "Scheduler");
+	        							pstmt1.setInt(4, seq);
+	        							pstmt1.executeUpdate();
+	        						}
+		        				}
+		        			}
+		        		}
+		        	}
+		        }
+	        } catch (SQLException e) {
+	            e.printStackTrace();
+	        }
+		}
+    }
+	
+	/**
+     * 시험분석 스케줄러
+     * 매일 오전 1시
+	 * @throws Exception 
+     */
+	@Scheduled(cron = "0 0 1 * * *")
+	//@Scheduled(fixedDelay=60000)
+	@Transactional
+    public void tstMailSendSchedule() throws Exception {
+		/*====================================================================================
+		 - 시험분석 스케줄러 : 메일발송기준 -
+		 1. 시험의뢰 후 3일이상 지연되는 결재 건들에 대해 알림(독촉)메일 발송
+		 2. 메일 발송 후 3일마다 지연되는 지 체크 후 재발송한다.
+		======================================================================================*/
+		log.debug("■■■■■■■ 시험분석스케줄러 실행 ■■■■■■■");
+		log.debug("■ 서버구분 : {}", profile);
+		
+		
+		// 로컬이 아닐때만 실행
+		if(!"local".equals(profile)) {
+			
+			
+//	        LocalDate today = LocalDate.now();		// 오늘 날짜
+//	        DayOfWeek week = today.getDayOfWeek();	// 오늘 날짜의 요일
+	        // 토요일과 일요일은 제외
+//	        if(!"SATURDAY".equals(week.toString()) && !"SUNDAY".equals(week.toString())) {
+	        	
+	        	// 아래 샘플코드...CmmUtil.mailSendSql()은 메일발송테이블 인서트 쿼리
+	        	try (Connection conn = CmmUtil.getConnection(profile);){
+			        if(conn != null) {
+			        	String sql = """
+			        			SELECT REQ.*
+								  FROM (
+										SELECT DATE_FORMAT(A.REQ_DDTT		, '%Y%m%d') AS REQ_DDTT             -- 의뢰일
+										     , DATE_FORMAT(B.DRAFT_DDTT		, '%Y%m%d') AS DRAFT_DDTT           -- 기안일
+										     , DATE_FORMAT(B.FNL_APPR_DDTT	, '%Y%m%d') AS FNL_APPR_DDTT        -- 최종결재자결재일
+										     , DATE_FORMAT(B.MAIL_SND_DDTT	, '%Y%m%d') AS MAIL_SND_DDTT        -- 이전메일송신일
+										     , DATE_FORMAT(NOW()        	, '%Y%m%d') AS CURRENT_DDTT         -- 현재일
+										     , A.TST_ANAL_MGMT_NO                   AS TST_ANAL_MGMT_NO     -- 시험분석관리번호
+											 , A.TST_ANAL_REQ_NO                    AS TST_ANAL_REQ_NO      -- 시험분석의뢰번호
+											 , B.APPR_DOC_NO                        AS APPR_DOC_NO          -- 결재문서번호
+											 , A.REQ_USER_ID	                    AS REQ_USER_ID          -- 의뢰사용자ID
+											 , A.REQ_USER_NM	                    AS REQ_USER_NM          -- 의뢰사용자명
+											 , A.REQ_DEPT_CD	                    AS REQ_DEPT_CD          -- 의뢰부서코드
+											 , A.REQ_DEPT_NM	                    AS REQ_DEPT_NM          -- 의뢰부서명
+											 , A.REQ_TEL_NO	                        AS REQ_TEL_NO 	        -- 의뢰전화번호
+											 , A.REQ_ADDRESS	                    AS REQ_ADDRESS          -- 의뢰주소
+											 , A.REQ_TITLE                          AS REQ_TITLE            -- 의뢰제목
+										     , B.TITLE                              AS APPR_TITLE           -- 결재제목
+										     , B.CONTENTS                           AS CONTENTS             -- 내용
+											 , B.CURR_APPR_M_NM                     AS CURR_APPR_M_NM       -- 현재 결재자 사용자 ID
+											 , B.CURR_APPR_M_JOBGRADE               AS CURR_APPR_M_JOBGRADE -- 현재 결재자 이름
+											 , B.CURR_APPR_DEPTH                    AS CURR_APPR_DEPTH      -- 현재 결재자 직급
+											 , B.CURR_APPR_M_USER_ID                AS CURR_APPR_M_USER_ID  -- 현재 결재자 사번
+											 , (SELECT U.EMAIL
+											      FROM TB_CM_USER_INFO U
+											     WHERE U.USER_ID = B.CURR_APPR_M_USER_ID) AS EMAIL       -- 현재 결재자 메일주소
+										  FROM TB_TST_ANAL_REQ_COMM A -- 시험분석의뢰
+										     , TB_APPR_DOC          B -- 결재문서
+										 WHERE 1=1
+										   AND A.APPR_DOC_NO = B.APPR_DOC_NO
+										   AND A.PROG_STAT = '20' -- 20:의뢰중
+										   AND A.REG_DDTT >= DATE_FORMAT('20241118', '%Y%m%d') -- 가동일 이후 등록된 건만(이행DATA무시)
+									   ) REQ
+								  WHERE IFNULL(REQ.FNL_APPR_DDTT, REQ.DRAFT_DDTT) <= CURRENT_DDTT-3
+								    AND IFNULL(REQ.MAIL_SND_DDTT, 0) <= CURRENT_DDTT-3
+								ORDER BY REQ_DDTT DESC
+					        	""";
+						
+			        	String mailTitle = "[R&D 시험/장비 관리 시스템] 시험분석의뢰 지연 알림";			// 메일제목
+			        	String mailContents = "";										// 메일내용
+			        	
+						// 로컬, 개발계, 운영계 확인 링크URL 지정
+						String callUrl = CmmUtil.getRtmsRootUrl(profile);
+						
+			        	try (PreparedStatement pstmt = conn.prepareStatement(sql);){
+			        		try (ResultSet rs = pstmt.executeQuery();){
+			        			
+			        			String sEMAIL		= ""; // 메일주소
+			        			String sAPPR_DOC_NO = ""; // 결재문서번호
+			        			String sAPPR_TITLE	= ""; // 결재제목
+			        			String sCONTENTS	= ""; // 결재내용
+			        			
+			        			int rowCount = 0;
+
+			        			while(rs.next()){
+			        				rowCount++;
+			        				log.debug("{} 번째 메일전송 중...", rowCount);
+			        				
+			        				sEMAIL			= rs.getString("EMAIL"		);  // 메일주소
+				        			sAPPR_DOC_NO	= rs.getString("APPR_DOC_NO");	// 결재문서번호
+				        			sAPPR_TITLE		= rs.getString("APPR_TITLE"	);	// 결재제목
+				        			sCONTENTS		= rs.getString("CONTENTS"	);	// 결재내용
+			        				
+			        				mailContents = "결재 지연 중인 시험분석의뢰 건이 존재합니다.</br>";		// 메일내용
+									mailContents += "해당 결재 건을 검토 후 결재 요청드립니다.</br></br>";
+									mailContents += "제목 : <a href='"+ callUrl + "/rtmsApprPop.do?APPR_DOC_NO="+sAPPR_DOC_NO+"'>" + sAPPR_TITLE +"</a></br>";
+										
+									if(!"".equals(sCONTENTS)) {
+										mailContents += "내용 : " + sCONTENTS;
+									}
+			        				
+			        				if(!"".equals(sEMAIL)) {
+		        						// 메일발송테이블에 insert
+			        					try (PreparedStatement pstmt1 = conn.prepareStatement(CmmUtil.mailSendSql())){
+		        							pstmt1.setString(1, "시험분석의뢰지연알림"	);
+		        							pstmt1.setString(2, sEMAIL			);
+		        							pstmt1.setString(3, mailTitle		);
+		        							pstmt1.setString(4, mailContents	);
+		        							pstmt1.executeUpdate();
+		        						}
+		        						
+		        						// 결재테이블에 메일발송일 Set
+		        						try (PreparedStatement pstmt2 = conn.prepareStatement("UPDATE TB_APPR_DOC SET MAIL_SND_DDTT = NOW() WHERE APPR_DOC_NO = '" + sAPPR_DOC_NO + "'")){
+		        							pstmt2.executeUpdate(); 
+		        						}
+			        				}
+			        			}
+			        		}
+			        	}
+			        }
+		        } catch (SQLException e) {
+		            e.printStackTrace();
+		        }
+//	        }
+		}
+	}
+	
+	/**
+	 * 가동율 입력공지 메일발송을 했는데도 가동율 입력을 안했을 경우의 메일발송을 위한 데이터 인서트 스케줄러
+	 * 매일 오전 2시 -> 2024.12.30 월요일만 가게 변경
+	 * @throws Exception 
+	 */
+	//@Scheduled(cron = "0 0 2 * * *")
+	@Scheduled(cron = "0 0 2 ? * MON")
+	public void operatingRateWriteNoticeByDaily() throws Exception {
+		boolean execute = false;
+		if(execute) {
+			try (Connection conn = CmmUtil.getConnection(profile);){
+		        if(conn != null) {
+		        	String sql = ""
+        			+ "SELECT U.EMAIL "
+        			+ "     , '[R&D 시험/장비 관리 시스템] 가동율 등록요청 건' AS MAIL_TITLE"
+        			+ "     , '가동율을 등록해 주시기 바랍니다.' AS MAIL_CONTENTS"
+        			+ "  FROM TB_EQP_MST A "
+        			+ "     , TB_CM_USER_INFO U "
+        			+ " WHERE A.EQP_CHARGER = U.USER_ID "
+        			+ "   AND A.OPRNRATE_MGMT_YN = 'Y' "
+        			+ "   AND NOT EXISTS (SELECT 1 "
+        			+ "                 	FROM TB_EQP_OPRN_RATE B"
+        			+ "                	   WHERE B.MGMT_NO = A.MGMT_NO "
+        			+ "                      AND NVL(B.APPR_DOC_NO,'') = '')";
+		        	
+		        	try (PreparedStatement pstmt = conn.prepareStatement(sql);){
+		        		try (ResultSet rs = pstmt.executeQuery();){
+		        			while(rs.next()){
+		        				String toAddr = rs.getString("EMAIL");
+		        				String title = rs.getString("MAIL_TITLE");
+		        				String contents = rs.getString("MAIL_CONTENTS");
+		        				
+		        				if(!"".equals(toAddr)) {
+	        						try (PreparedStatement pstmt1 = conn.prepareStatement(CmmUtil.mailSendSql())){
+	        							pstmt1.setString(1, "연구장비가동율등록");
+	        							pstmt1.setString(2, toAddr);
+	        							pstmt1.setString(3, title);
+	        							pstmt1.setString(4, contents);
+	        							pstmt1.executeUpdate();
+	        						}
+		        				}
+		        			}
+		        		}
+		        	}
+		        }
+	        } catch (SQLException e) {
+	            e.printStackTrace();
+	        }
+		}
+	}
+	
+    /**
+     * 매분기시작 5일전 가동율 입력공지 메일발송을 위한 데이터 인서트 스케줄러
+     * 매년 3월 26일, 6월 25일, 9월 25일, 12월 26일 00:00에 실행
+     * 
+     * 2025.03.21 오창용
+     * 각분기 종료 5일전 가동률 등록 메일 전송
+     * @throws Exception 
+     */
+    @Scheduled(cron = "0 0 0 26 3 ?")
+    @Scheduled(cron = "0 0 0 25 6 ?")
+    @Scheduled(cron = "0 0 0 25 9 ?")
+    @Scheduled(cron = "0 0 0 26 12 ?")
+    public void operatingRateWriteNoticeByQuarter2() throws Exception {
+    	// 로컬이 아닐때만 실행
+		if(!"local".equals(profile)) {
+			try (Connection conn = CmmUtil.getConnection(profile);){
+		        if(conn != null) {
+		        	String sql = ""
+        			+ " SELECT  U.EMAIL "
+        			+ "       , CONCAT('[R&D 시험/장비 관리 시스템] ', H.YEAR_1, '.', H.QUARTER_1, '분기 종료로 인한 가동률 등록요청 건') MAIL_TITLE "
+        			+ "       , CONCAT('안녕하세요.<br><br>', YEAR_1, '.', QUARTER_1, '분기 가동률을 등록하여 주시기 바랍니다.<br><br>등록하실 자산번호/ 자산명은 다음과 같습니다.<br><br>',H.CONTENTS) MAIL_CONTENTS "
+        			+ "   FROM (SELECT  H.DEPT_CD "
+        			+ "               , DATE_FORMAT(CONCAT(DATE_FORMAT(NOW(), '%Y'), LPAD((QUARTER(NOW()) * 3) - 2, 2, 0), '01'), '%Y') AS YEAR_1 "
+        			+ "               , QUARTER(CONCAT(DATE_FORMAT(NOW(), '%Y'), LPAD((QUARTER(NOW()) * 3) - 2, 2, 0), '01')) AS QUARTER_1 "
+        			+ "               , GROUP_CONCAT(CONCAT(H.ASSET_NO, ' ', H.ASSET_NM) ORDER BY H.ASSET_NO SEPARATOR '<br>')  CONTENTS  "
+        			+ "           FROM  TB_EQP_MST  H "
+        			+ "           WHERE H.OPRNRATE_MGMT_YN = 'Y' "
+        			+ "             AND H.EQP_STAT IN ('A','D') "
+        			+ "             AND H.REG_DATE  < (SELECT DATE_ADD(CONCAT(DATE_FORMAT(NOW(), '%Y'), LPAD((QUARTER(NOW()) * 3) - 2, 2, 0), '01'), INTERVAL -1 MONTH) AS Q_D  FROM DUAL) "
+        			+ "             AND (NOT EXISTS (SELECT  'X' "
+        			+ "                                FROM  TB_EQP_OPRN_RATE  S "
+        			+ "                                WHERE S.MGMT_NO = H.MGMT_NO "
+        			+ "                                  AND S.PROG_STAT IN ('D','F') "
+        			+ "                                  AND S.OPRN_YYMM IN ( "
+        			+ "                                  SELECT   DATE_FORMAT(CONCAT(DATE_FORMAT(NOW(), '%Y'), LPAD((QUARTER(NOW()) * 3) - 2, 2, 0), '01'), '%Y%m') AS Q_D "
+        			+ "                                  FROM DUAL) "
+        			+ "                                  ) "
+        			+ "               OR NOT EXISTS (SELECT  'X' "
+        			+ "                                FROM  TB_EQP_OPRN_RATE  S "
+        			+ "                                WHERE S.MGMT_NO = H.MGMT_NO "
+        			+ "                                  AND S.PROG_STAT IN ('D','F') "
+        			+ "                                  AND S.OPRN_YYMM IN ( "
+        			+ "                                  SELECT DATE_FORMAT(DATE_ADD(CONCAT(DATE_FORMAT(NOW(), '%Y'), LPAD((QUARTER(NOW()) * 3) - 2, 2, 0), '01'), INTERVAL +1 MONTH), '%Y%m') AS Q_D "
+        			+ "                                  FROM DUAL) "
+        			+ "                                  ) "
+        			+ "               OR NOT EXISTS (SELECT  'X' "
+					+ "                                FROM  TB_EQP_OPRN_RATE  S "
+					+ "                                WHERE S.MGMT_NO = H.MGMT_NO "
+					+ "                                  AND S.PROG_STAT IN ('D','F') "
+					+ "                                  AND S.OPRN_YYMM IN ( "
+					+ "                                  SELECT DATE_FORMAT(DATE_ADD(CONCAT(DATE_FORMAT(NOW(), '%Y'), LPAD((QUARTER(NOW()) * 3) - 2, 2, 0), '01'), INTERVAL +2 MONTH), '%Y%m') AS Q_D "
+					+ "                                  FROM DUAL) "
+					+ "                                  ) "
+        			+ "                  ) "
+        			+ "           GROUP BY H.DEPT_CD "
+        			+ "        ) H "
+        			+ "   LEFT JOIN  TB_CM_USER_INFO  U "
+        			+ "     ON  U.DEPT_CD = H.DEPT_CD "
+        			+ "     AND NVL(U.EMAIL, '') != '' "
+        			+ "   ORDER BY H.DEPT_CD ";		        	
+		        	try (PreparedStatement pstmt = conn.prepareStatement(sql);){
+		        		try (ResultSet rs = pstmt.executeQuery();){
+		        			while(rs.next()){
+		        				String toAddr = rs.getString("EMAIL");
+		        				String title = rs.getString("MAIL_TITLE");
+		        				String contents = rs.getString("MAIL_CONTENTS");
+		        				
+		        				if(!"".equals(toAddr)) {
+	        						try (PreparedStatement pstmt1 = conn.prepareStatement(CmmUtil.mailSendSql())){
+	        							pstmt1.setString(1, "연구장비가동율등록");
+	        							pstmt1.setString(2, toAddr);
+	        							pstmt1.setString(3, title);
+	        							pstmt1.setString(4, contents);
+	        							pstmt1.executeUpdate();
+	        						}
+		        				}
+		        			}
+		        		}
+		        	}
+		        }
+	        } catch (SQLException e) {
+	            e.printStackTrace();
+	        }
+		}
+    }
+    
+    /**
+	 * 매분기시작 5일후 가동율 입력공지 메일발송을 위한 데이터 인서트 스케줄러
+	 * 매년 1월 1~10일, 4월 1~10일, 7월 1~10일, 10월 1~10일 00:00에 실행
+	 *  @Scheduled(cron = "0 0 0 1-10 1,4,7,10 ?")
+	 *        
+     * 25.01.08 오창용
+     * 가동등록된, 안된 등록 장비가 모두 전송 되는 현상 
+     * 등록 안된 장비만 메일 전송  TEST
+     * 
+     * 1주일에 한번 매우월요일 07:00로 변경
+     * 현재 25년 1분기이면 이전 분기 즉 202424.4분기 가동률을 등록하여 주시기 바랍니다. 라고 보내야함
+     * 
+     * 2025.02.17 정지원
+     * 신규등록 장비는 등록일자 기준으로 메일 전송 불가 하게 막아야한다.
+	 * @throws Exception 
+	 */
+    @Scheduled(cron = "0 0 7 * * MON")
+	public void operatingRateWriteNoticeByQuarter1() throws Exception {
+		// 로컬이 아닐때만 실행
+		if(!"local".equals(profile)) {
+			try (Connection conn = CmmUtil.getConnection(profile);){
+		        if(conn != null) {
+		        	String sql = ""
+        			+ " SELECT  U.EMAIL "
+        			+ "       , CONCAT('[R&D 시험/장비 관리 시스템] ', H.YEAR_1, '.', H.QUARTER_1, '분기 가동률 등록요청 건') MAIL_TITLE "
+        			+ "       , CONCAT('안녕하세요.<br><br>', YEAR_1, '.', QUARTER_1, '분기 가동률을 등록하여 주시기 바랍니다.<br><br>등록하실 자산번호/ 자산명은 다음과 같습니다.<br><br>',H.CONTENTS) MAIL_CONTENTS "
+        			+ "   FROM (SELECT  H.DEPT_CD "
+        			+ "               , DATE_FORMAT(DATE_ADD(CONCAT(DATE_FORMAT(NOW(), '%Y'), LPAD((QUARTER(NOW()) * 3) - 2, 2, 0), '01'), INTERVAL -1 MONTH), '%Y') AS YEAR_1  "        			
+        			+ "               , QUARTER(DATE_ADD(CONCAT(DATE_FORMAT(NOW(), '%Y'), LPAD((QUARTER(NOW()) * 3) - 2, 2, 0), '01'), INTERVAL -1 MONTH)) AS QUARTER_1 "
+        			+ "               , GROUP_CONCAT(CONCAT(H.ASSET_NO, ' ', H.ASSET_NM) ORDER BY H.ASSET_NO SEPARATOR '<br>')  CONTENTS "
+        			+ "           FROM  TB_EQP_MST  H "
+        			+ "           WHERE H.OPRNRATE_MGMT_YN = 'Y' "
+        			+ "             AND H.EQP_STAT IN ('A','D') "
+        			+ "             AND H.REG_DATE  < (SELECT DATE_ADD(CONCAT(DATE_FORMAT(NOW(), '%Y'), LPAD((QUARTER(NOW()) * 3) - 2, 2, 0), '01'), INTERVAL -1 MONTH) AS Q_D  FROM DUAL) "
+        			+ "             AND (NOT EXISTS (SELECT  'X' "
+        			+ "                                FROM  TB_EQP_OPRN_RATE  S "
+        			+ "                                WHERE S.MGMT_NO = H.MGMT_NO "
+        			+ "                                  AND S.PROG_STAT IN ('D','F') "
+        			+ "                                  AND S.OPRN_YYMM IN ( " 
+        			+ "                                  SELECT   DATE_FORMAT(DATE_ADD(CONCAT(DATE_FORMAT(NOW(), '%Y'), LPAD((QUARTER(NOW()) * 3) - 2, 2, 0), '01'), INTERVAL -1 MONTH), '%Y%m') AS Q_D "
+        			+ "                                  FROM DUAL "              			
+        			+ "                  				)"
+        			+ "								) "
+        			+ "					OR NOT EXISTS (SELECT  'X' "
+        			+ "                                  FROM  TB_EQP_OPRN_RATE  S "
+        			+ "                                 WHERE S.MGMT_NO = H.MGMT_NO "
+        			+ "                                   AND S.PROG_STAT IN ('D','F') "
+        			+ "                                   AND S.OPRN_YYMM IN ( " 
+        			+ "                                  SELECT DATE_FORMAT(DATE_ADD(DATE_ADD(CONCAT(DATE_FORMAT(NOW(), '%Y'), LPAD((QUARTER(NOW()) * 3) - 2, 2, 0), '01'), INTERVAL -1 MONTH), INTERVAL -1 MONTH), '%Y%m') AS Q_D "
+        			+ "                                  FROM DUAL "
+        			+ "                  				)"
+        			+ "								) "
+        			+ "					OR NOT EXISTS (SELECT  'X' "
+        			+ "                                  FROM  TB_EQP_OPRN_RATE  S "
+        			+ "                                 WHERE S.MGMT_NO = H.MGMT_NO "
+        			+ "                                   AND S.PROG_STAT IN ('D','F') "
+        			+ "                                   AND S.OPRN_YYMM IN ( " 
+        			+ "                                  SELECT DATE_FORMAT(DATE_ADD(DATE_ADD(CONCAT(DATE_FORMAT(NOW(), '%Y'), LPAD((QUARTER(NOW()) * 3) - 2, 2, 0), '01'), INTERVAL -1 MONTH), INTERVAL -2 MONTH), '%Y%m') AS Q_D "
+        			+ "                                  FROM DUAL " 
+        			+ "                  				)"
+        			+ "								)  "
+        			+ "                  ) "
+        			+ "           GROUP BY H.DEPT_CD "
+        			+ "        ) H "
+        			+ "   LEFT JOIN  TB_CM_USER_INFO  U "
+        			+ "     ON  U.DEPT_CD = H.DEPT_CD "
+        			+ "     AND NVL(U.EMAIL, '') != '' "
+        			+ "   ORDER BY H.DEPT_CD ";		        	
+		        	try (PreparedStatement pstmt = conn.prepareStatement(sql);){
+		        		try (ResultSet rs = pstmt.executeQuery();){
+		        			while(rs.next()){
+		        				String toAddr = rs.getString("EMAIL");
+		        				String title = rs.getString("MAIL_TITLE");
+		        				String contents = rs.getString("MAIL_CONTENTS");
+		        				
+		        				if(!"".equals(toAddr)) {
+	        						try (PreparedStatement pstmt1 = conn.prepareStatement(CmmUtil.mailSendSql())){
+	        							pstmt1.setString(1, "연구장비가동율등록");
+	        							pstmt1.setString(2, toAddr);
+	        							pstmt1.setString(3, title);
+	        							pstmt1.setString(4, contents);
+	        							pstmt1.executeUpdate();
+	        						}
+		        				}
+		        			}
+		        		}
+		        	}
+		        }
+	        } catch (SQLException e) {
+	            e.printStackTrace();
+	        }
+		}
+	}
+    
+    
+    
+    
+    
+    
+    /**
+     * 2025.02.19 정지원
+     * 신규등록 장비 는 진행상태 등록요청, 등록중의 경우 매주 월요일 등록 안내 메일 발송 요청
+	 * @throws Exception 
+	 */
+    @Scheduled(cron = "0 10 7 * * MON")
+	public void newEquipNoticeMail() throws Exception {
+		// 로컬이 아닐때만 실행
+		// if(!"local".equals(profile)) {
+			try (Connection conn = CmmUtil.getConnection(profile);){
+		        if(conn != null) {
+		        	String sql = ""
+        			+ " SELECT  T2.DEPT_CD "
+        			+ "       , T2.EMAIL "
+        			+ "       , T2.MAIL_TILTE AS MAIL_TITLE"
+        			+ "       , CONCAT('신규연구장비 등록요청에 관해 확인 바랍니다.<br><br>등록하실 자산번호/ 자산명은 다음과 같습니다.<br><br>',T2.CONTENTS) MAIL_CONTENTS "
+        			+ "   FROM (      "
+        			+ "         SELECT T.DEPT_CD  "        			
+        			+ "              , T.EQP_CHARGER "
+        			+ "              , T.EMAIL AS EMAIL"
+        			+ "              ,'[R&D 시험/장비 관리 시스템] 신규연구장비 등록요청 건 ' AS MAIL_TILTE "
+        			+ "              , GROUP_CONCAT(CONCAT(T.ASSET_NO, ' ', T.ASSET_NM) ORDER BY T.ASSET_NO SEPARATOR '<br>') AS CONTENTS "
+        			+ "           FROM ( "
+        			+ "           		SELECT  H.MGMT_NO "
+        			+ "           		  	  , H.DEPT_CD "
+        			+ "           		  	  , H.DEPT_NM "
+        			+ "           		  	  , H.EQP_CHARGER "
+        			+ "           		  	  , CASE WHEN NVL(H.EQP_CHARGER,'')  = '' THEN CONCAT(H.DEPT_NM, ' - 전체메일발송') "
+        			+ "           		  	   	     WHEN NVL(H.EQP_CHARGER,'') != '' THEN H.EMAIL "
+        			+ "           		  	   		 END EMAIL "
+        			+ "           		  	  , H.ASSET_NM  "
+        			+ "           		  	  , H.ASSET_NO  "
+        			+ "           		  	  , H.PROG_STAT  "
+        			+ "           		   FROM ( SELECT H.MGMT_NO "
+        			+ "           		   			   , H.VER_NO "
+        			+ "           		   			   , H.DEPT_CD "
+        			+ "           		   			   , H.DEPT_NM "
+        			+ "           		   			   , H.EQP_CHARGER "
+        			+ "           		   			   , M.USER_NM AS EQP_CHARGER_NM "
+        			+ "           		   			   , M.EMAIL "
+        			+ "           		   			   , H.INVEST_NM  AS ASSET_NM "
+        			+ "           		   			   , H.ACQ_PRICEAMT "
+        			+ "           		   			   , H.ASSET_NO "
+        			+ "           		   			   , H.ACQ_DATE "
+        			+ "           		   			   , H.EQP_CLASS "
+        			+ "           		   			   , H.PROG_STAT "
+        			+ "           		   			   , COUNT (*) OVER (PARTITION BY H.MGMT_NO) CO "        			
+        			+ "           		   			FROM  TB_EQP_MOD_LOG  H "
+        			+ "           		   			LEFT JOIN TB_CM_USER_INFO M "
+        			+ "           		   			ON M.USER_ID = H.EQP_CHARGER "
+        			+ "           		   			WHERE EXISTS (SELECT  'X' "
+        			+ "           		   							FROM  TB_EQP_MST  S "
+        			+ "           		   						   WHERE S.MGMT_NO = H.MGMT_NO) "
+        			+ "           		   		) H "
+        			+ "           		  WHERE H.CO = 1"
+        			+ "           		   AND H.PROG_STAT IN ('B', 'C') "
+        			+ "           		   AND NVL(H.DEPT_CD   ,'') LIKE CONCAT('','%') "
+        			+ "           		   AND NVL(H.PROG_STAT ,'') LIKE CONCAT('','%') "
+        			+ "           		   AND NVL(H.ASSET_NM ,'') LIKE CONCAT('','%') "
+        			+ "           		   AND NVL(H.ACQ_PRICEAMT,'') LIKE CONCAT('','%') "
+        			+ "           	    ) AS T "
+        			+ "          GROUP BY DEPT_CD, T.EQP_CHARGER  "
+        			+ "         ) AS T2 "        			
+        			+ "   ORDER BY T2.DEPT_CD ";		        	
+		        	try (PreparedStatement pstmt = conn.prepareStatement(sql);){
+		        		try (ResultSet rs = pstmt.executeQuery();){
+		        			while(rs.next()){
+		        				String toAddr = rs.getString("EMAIL");
+		        				String title = rs.getString("MAIL_TITLE");
+		        				String contents = rs.getString("MAIL_CONTENTS");
+		        				System.out.println("toAddr : " + toAddr + "title : " + title + "contents : " + contents);
+		        				if(!"".equals(toAddr)) {
+	        						try (PreparedStatement pstmt1 = conn.prepareStatement(CmmUtil.mailSendSql())){
+	        							pstmt1.setString(1, "신규연구장비등록");
+	        							pstmt1.setString(2, toAddr);
+	        							pstmt1.setString(3, title);
+	        							pstmt1.setString(4, contents);
+	        							//pstmt1.executeUpdate();
+	        						}
+		        				}
+		        			}
+		        		}
+		        	}
+		        }
+	        } catch (SQLException e) {
+	            e.printStackTrace();
+	        }
+		//} end if(!"local".equals(profile)) {
+	}
+    
+    
+    
+    
+    /**
+     * 장비관리자부서와 장비관리부서가 매칭이 안되면 장비관리자부서 팀장에게 알람메일(매주 월요일 오전 3시)
+	 * @throws Exception 
+     */
+	@Scheduled(cron = "0 0 3 ? * MON")
+	//@Scheduled(fixedDelay=60000)
+	@Transactional
+    public void mailSendDeptNotMatchEqpModLog() throws Exception {
+		log.debug("■■■■■■■ 장비관리부서 매칭 확인 스케줄러 실행 ■■■■■■■");
+		log.debug("■ 서버구분 : {}", profile);
+		
+		// 로컬이 아닐때만 실행
+		if(!"local".equals(profile)) {
+		
+        	try (Connection conn = CmmUtil.getConnection(profile);){
+		        if(conn != null) {
+		        	
+		        	// 1.메일발송대상 조회 : 관리부서와 장비관리자부서가 매칭이 안되는 부서코드와 팀장메일주소 조회 
+		        	String sql = """
+		        			SELECT H.DEPT_CD AS EQP_DEPT_CD          -- 관리부서코드
+							     , H.DEPT_NM AS EQP_DEPT_NM          -- 관리부서명
+							     , (SELECT U.EMAIL
+							           FROM TB_CM_USER_INFO U
+							          WHERE U.DEPT_CD = H.DEPT_CD
+							            AND ROLE_CD = 'ROLE160'
+							            AND ROWNUM() = 1
+							       ) AS EMAIL_TL                     -- 관리부서팀장 메일주소
+							  FROM  TB_EQP_MOD_LOG  H
+							  JOIN  (
+							  			SELECT L.MGMT_NO      AS MGMT_NO
+							  			      , MAX(L.VER_NO) AS VER_NO
+							  			  FROM TB_EQP_MOD_LOG L
+							  			GROUP BY L.MGMT_NO
+							        ) V
+							    ON H.MGMT_NO = V.MGMT_NO
+							   AND H.VER_NO  = V.VER_NO
+							  LEFT JOIN TB_CM_USER_INFO  M
+							    ON  M.USER_ID = H.EQP_CHARGER
+							  WHERE H.DEPT_CD != M.DEPT_CD     -- 관리부서와 관리자부서가 다른
+							    AND H.EQP_STAT IN ('A','D') -- 가동, 수리중
+							 GROUP BY H.DEPT_CD
+				        	""";
+		        	
+		        	try (PreparedStatement pstmt = conn.prepareStatement(sql);){
+		        		try (ResultSet rs = pstmt.executeQuery();){
+		        			
+		        			String sEQP_DEPT_CD = ""; // 관리부서코드
+		        			String sEMAIL		= ""; // 관리부서 팀장 메일주소
+		        			
+		        			int rowCount = 0;
+
+		        			while(rs.next()){
+		        				rowCount++;
+		        				log.debug("{} 번째 메일전송 중..", rowCount);
+		        				
+		        				sEQP_DEPT_CD	= rs.getString("EQP_DEPT_CD");  // 관리부서코드
+		        				sEMAIL			= rs.getString("EMAIL_TL"	);  // 관리부서 팀장 메일주소
+		        				
+		        				log.debug("sEQP_DEPT_CD : " + sEQP_DEPT_CD);
+		        				log.debug("sEMAIL		: " + sEMAIL);
+		        				
+		        				// 메일주소가 없으면 발송 pass
+		        				if(null == sEMAIL || "".equals(sEMAIL)) continue;
+		        				
+		        				//장비관리자 지정 
+		        				String mailTitle    = "장비관리자 변경 요청 건";
+		        				String mailContents = "</br>아래는 장비관리부서와 관리담당자가 상이한 장비 목록입니다.</br>";		// 메일내용
+								mailContents += "장비 담당자 확인 후 변경 요청드립니다.</br></br>";
+								
+								String sql2 = MessageFormat.format("""
+							        			SELECT  H.MGMT_NO            AS MGMT_NO              -- 관리번호
+												      , H.VER_NO             AS VER_NO               -- 버전
+												      , H.ASSET_NO           AS ASSET_NO             -- 자산번호
+												      , H.OLD_ASSET_NO       AS OLD_ASSET_NO         -- 자산번호(구)
+												      , H.DEPT_CD            AS EQP_DEPT_CD          -- 관리부서코드
+												      , M.DEPT_CD            AS CGR_DEPT_CD          -- 관리자부서코드
+												      , H.DEPT_NM            AS EQP_DEPT_NM          -- 관리부서명
+												      , M.DEPT_NM            AS CGR_DEPT_NM          -- 관리자부서명
+												      , H.EQP_CHARGER        AS EQP_CHARGER          -- 관리자사번
+												      , M.USER_NM            AS EQP_CHARGER_NM       -- 관리자명
+												      , M.JOBGRADE_CD        AS JOBGRADE_CD          -- 관리자직급코드
+												      , M.JOBGRADE_NM        AS JOBGRADE_NM          -- 관리자직급
+												      , H.ASSET_NM           AS ASSET_NM             -- 장비명
+												      , H.ASSET_NM_EN        AS ASSET_NM_EN          -- 장비영문명
+												      , (SELECT U.EMAIL
+												           FROM TB_CM_USER_INFO U
+												          WHERE U.DEPT_CD = H.DEPT_CD
+												            AND U.ROLE_CD = {0}
+												            AND ROWNUM() = 1) AS EMAIL_TL
+												  FROM  TB_EQP_MOD_LOG  H
+												  JOIN  (
+												  			SELECT L.MGMT_NO      AS MGMT_NO
+												  			      , MAX(L.VER_NO) AS VER_NO
+												  			  FROM TB_EQP_MOD_LOG L
+												  			GROUP BY L.MGMT_NO
+												        ) V
+												    ON H.MGMT_NO = V.MGMT_NO
+												   AND H.VER_NO  = V.VER_NO
+												  LEFT JOIN TB_CM_USER_INFO  M
+												    ON  M.USER_ID = H.EQP_CHARGER
+												  WHERE H.DEPT_CD != M.DEPT_CD  -- 관리부서와 관리자부서가 다른
+												    AND H.EQP_STAT IN ({1},{2}) -- 가동, 수리중
+												    AND H.DEPT_CD = {3}
+												 ORDER BY M.USER_NM
+								        	""", "'ROLE160'", "'A'", "'D'", "'" + sEQP_DEPT_CD + "'"); 
+								
+								try (PreparedStatement pstmt2 = conn.prepareStatement(sql2);){
+					        		try (ResultSet rs2 = pstmt2.executeQuery();){
+					        			
+					        			String tableContent = """
+						        					<table style="width: 100%; border-collapse: collapse;">
+									        		    <thead>
+									        		        <tr style="background-color: #f2f2f2;">
+									        		        	<th style="border: 1px solid black; padding: 8px; text-align: center;">자산번호(구자산번호)</th>
+									        		            <th style="border: 1px solid black; padding: 8px; text-align: center;">장비명</th>
+									        		            <th style="border: 1px solid black; padding: 8px; text-align: center;">장비관리부서</th>
+									        		            <th style="border: 1px solid black; padding: 8px; text-align: center;">장비관리자</th>
+									        		        </tr>
+									        		    </thead>
+									        		    <tbody>""";
+					        			
+					        			while(rs2.next()){
+					        				
+					        				String rs2ASSET_NO          = rs2.getString("ASSET_NO");        // 자산번호
+					        				String rs2OLD_ASSET_NO      = rs2.getString("OLD_ASSET_NO");    // 자산번호(구)
+					        				String rs2ASSET_NM			= rs2.getString("ASSET_NM");		// 장비명
+					        				String rs2EQP_DEPT_NM		= rs2.getString("EQP_DEPT_NM");		// 관리부서명
+					        				String rs2EQP_CHARGER_NM	= rs2.getString("EQP_CHARGER_NM");	// 관리자명
+					        				String rs2CGR_DEPT_NM		= rs2.getString("CGR_DEPT_NM");		// 관리자부서명
+					        				
+					        				tableContent += MessageFormat.format("""
+						        				<tr>
+					        						<td style="border: 1px solid black; padding: 8px; text-align: center;">{0}</td>
+						        		            <td style="border: 1px solid black; padding: 8px; text-align: left;">{1}</td>
+						        		            <td style="border: 1px solid black; padding: 8px; text-align: center;">{2}</td>
+						        		            <td style="border: 1px solid black; padding: 8px; text-align: center;">{3}</td>
+						        		        </tr>
+					        				 """, rs2ASSET_NO + "(" + rs2OLD_ASSET_NO + ")", rs2ASSET_NM, rs2EQP_DEPT_NM, rs2EQP_CHARGER_NM + "(" + rs2CGR_DEPT_NM + ")");
+					        			}
+					        			tableContent += "</tbody></table>";
+					        			mailContents += tableContent;
+					        			
+					        		}
+					        	}
+								
+		        				if(!"".equals(sEMAIL)) {
+	        						// 메일발송테이블에 insert
+		        					try (PreparedStatement pstmt1 = conn.prepareStatement(CmmUtil.mailSendSql())){
+	        							pstmt1.setString(1, "장비관리부서확인알림"	);
+	        							pstmt1.setString(2, sEMAIL			);
+	        							pstmt1.setString(3, mailTitle		);
+	        							pstmt1.setString(4, mailContents	);
+	        							pstmt1.executeUpdate();
+	        						}
+		        					
+		        					// 로컬메일발송테스트용
+//		        					log.debug("sEMAIL : {}", sEMAIL);
+//		        					log.debug("mailTitle : {}", mailTitle);
+//		        					log.debug("mailContents : {}", mailContents);
+//		        					sEMAIL = "minjonggeun2@partners-steel.com";
+//		        					MailSendUtil.sendMail(sEMAIL, "rtms@partners-steel.com", "R&D 시험/장비 관리 시스템", mailContents, mailTitle);
+		        				}
+		        			} // while(rs.next()) END
+		        			
+		        		}
+		        	}
+		        }
+	        } catch (SQLException e) {
+	            e.printStackTrace();
+	        }
+		}
+	}
+}
