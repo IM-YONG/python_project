@@ -1,0 +1,168 @@
+package hds.tech.rtms.common.config;
+
+import java.io.PrintWriter;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.web.AuthenticationEntryPoint;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.AccessDeniedHandler;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.csrf.HttpSessionCsrfTokenRepository;
+import org.springframework.security.web.header.writers.XXssProtectionHeaderWriter;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+/**   
+*
+* @ClassName 	:	SecurityConfig
+* @Description  :	Spring Security 설정 
+* @author 		:	POMTEC   
+* @date 		:	2024-04-17    
+*    
+*/
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig {
+	
+	@Bean
+	SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+		
+		http
+			/*******************************************************************************************************************/
+			// CSRF(Cross-site request forgery, CSRF) 설정
+			.csrf(c -> {
+				
+				// CSRF 보호를 사용하지 않아야 하는 HttpServletRequest를 지정
+				c.ignoringRequestMatchers(
+						 "/**"
+						,"/api/**"
+						,"/loginPage.do"
+						,"/index.do"
+						,"/session.do"
+						,"/sessionExpire.do"
+						,"/popup.do"
+						,"/system/user/passwordModify.do"
+				);
+			})
+			/*******************************************************************************************************************/
+			// CORS(교차출처리소스공유) 설정
+			// WebConfig.java에서 지정함
+			/*******************************************************************************************************************/
+			// Interceptors 설정
+			// WebConfig.java에서 지정함
+			/*******************************************************************************************************************/
+			// XSS / X-Frame-Options / CSP(컨텐츠보안정책) 설정
+			.headers(headersConfigurer ->
+				headersConfigurer
+					// 보안설정4.  X-XSS-나이트메어 방지
+					.xssProtection(xssProtection ->
+						// X-XSS-Protection: 1;				=> XSS 필터링을 사용합니다. 공격이 탐지되면 안전하지 않는 영역을 제거 후 페이지 렌더링을 합니다.
+						// xssProtection.headerValue(XXssProtectionHeaderWriter.HeaderValue.ENABLED)
+						
+						// X-XSS-Protection: 1; mode=block	=> XSS 필터링을 사용합니다. 공격이 탐지되면 페이지 렌더링을 중단합니다.
+						xssProtection.headerValue(XXssProtectionHeaderWriter.HeaderValue.ENABLED_MODE_BLOCK)
+					)
+					/*******************************************************************************************************************/
+					// X-Frame-Options(프레임허용정책) 적용 (시스템에 DENY / SAMEORIGIN 일괄 적용)
+					// !) 타 사이트의 iFrame에 우리사이트의 페이지를 표시할 상황이 없는 경우 아래 주석을 풀어 Sameorigin으로 적용한다.
+					.frameOptions(frameOption ->
+						// DENY			=> 컨텐츠를 다른 사이트에서 사용을 금지합니다. iframe 사용불가.
+						// frameOption.deny()
+						
+						// SAMEORIGIN	=> 컨텐츠를 동일한 도메인에서만 표현합니다.
+						frameOption.sameOrigin()
+		            )
+					/*******************************************************************************************************************/
+					// 보안설정6. CSP(컨텐츠보안정책) 지정
+					/* 아래 사용하면 exbuilder.json 안에 있는 로딩바가 엑박이 뜬다 그래서 주석처리...
+					.contentSecurityPolicy(contentSecurityPolicyConfig  ->
+						contentSecurityPolicyConfig.policyDirectives(
+							// !) X빌더의 SPA 환경은 프론트엔드 코드를 실시간으로 서버에서 가져와서 해당 스크립트를 실행하므로 'unsafe-inline'을 해제할 수 없음.
+							"default-src 'self' 'unsafe-eval' 'unsafe-inline';"
+						)
+					)
+					*/
+					/*******************************************************************************************************************/
+			)
+			
+			// SessionCreationPolicy.STATELESS는 스프링 시큐리티가 세션을 생성하거나 사용하지 않도록 설정한다.(SSO를 통해 세션을 연결해야해서...)
+			.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+			
+			// 인증권한 설정(SSO로그인을 사용하므로 전체허용하고 Spring Security의 로그인창이 나오지 않게 설정
+			.authorizeHttpRequests((authorizeRequests) ->
+				authorizeRequests.anyRequest().permitAll() 
+			)
+			
+			// 인증 및 인가되지 않은(401 403 관련) 접근에대한 예외처리
+			.exceptionHandling((exceptionConfig) ->
+				exceptionConfig.authenticationEntryPoint(unauthorizedEntryPoint).accessDeniedHandler(accessDeniedHandler)
+			);
+		return http.build();
+	}
+	
+	@Bean
+    HttpSessionCsrfTokenRepository sessionCsrfRepository() {
+        HttpSessionCsrfTokenRepository csrfRepository = new HttpSessionCsrfTokenRepository();
+        csrfRepository.setHeaderName("X-CSRF-TOKEN");
+        csrfRepository.setParameterName("_csrf");
+        csrfRepository.setSessionAttributeName("CSRF_TOKEN");
+        return csrfRepository;
+    }
+	
+	@Bean
+    CookieCsrfTokenRepository cookieCsrfRepository() {
+        CookieCsrfTokenRepository csrfRepository = new CookieCsrfTokenRepository();
+        csrfRepository.setHeaderName("X-CSRF-TOKEN");
+        csrfRepository.setParameterName("_csrf");
+        csrfRepository.setCookieName("XSRF-TOKEN");
+        return csrfRepository;
+    }
+
+	// 401 : 인증되지 않아 요청거부
+	private final AuthenticationEntryPoint unauthorizedEntryPoint = (request, response, authException) -> {
+		ErrorMsgDto fail = new ErrorMsgDto(HttpStatus.UNAUTHORIZED, "Spring security Unauthorized.");
+        response.setStatus(HttpStatus.UNAUTHORIZED.value());
+        String json = new ObjectMapper().writeValueAsString(fail);
+        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        PrintWriter writer = response.getWriter();
+        writer.write(json);
+        writer.flush();
+    };
+    
+    // 403 : 권한이 없어 요청거부
+    private final AccessDeniedHandler accessDeniedHandler = (request, response, accessDeniedException) -> {
+    	ErrorMsgDto fail = new ErrorMsgDto(HttpStatus.FORBIDDEN, "Spring security Forbidden.");
+        response.setStatus(HttpStatus.FORBIDDEN.value());
+        String json = new ObjectMapper().writeValueAsString(fail);
+        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        PrintWriter writer = response.getWriter();
+        writer.write(json);
+        writer.flush();
+    };
+
+	// 에러메세지 DTO
+	public class ErrorMsgDto {
+	    	
+	    private final HttpStatus status;
+	    private final String message;
+		
+	    public ErrorMsgDto(HttpStatus unauthorized, String pMessage) {
+	    	status	= unauthorized;
+	    	message = pMessage;
+		}
+	    
+		public HttpStatus getStatus() {
+			return status;
+		}
+		
+		public String getMessage() {
+			return message;
+		}
+	}
+}
