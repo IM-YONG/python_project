@@ -1,0 +1,50 @@
+/************************************************
+ * Name  : PrjFloatControl.js
+ * Title : 과제진행단계표시 (UDC)
+ * Desc  : 과제의 진행단계를 표시한다.
+ ************************************************
+ * 수정일              이름              사유
+ ************************************************
+ * 2025. 05. 15.     exBuilder        Created
+ *
+ ************************************************/
+/************************************************
+ * 공통 모듈 선언
+ ************************************************/
+var util = createCommonUtil();
+
+/*
+ * 임베디드 페이지에서 load 이벤트 발생 시 호출.
+ * 페이지의 Load가 완료되었을 때 호출되는 Event.
+ */
+function onEp1Load(e){
+	var ep1 = e.control;
+
+	var vTaskNo = app.getAppProperty("detailData");
+	
+	app.lookup("dmParam").setValue("TASK_NO", vTaskNo);
+	util.Submit.send(app, "subStep", null, function(subSuccess) {
+		if (subSuccess) {
+		    var embeddedPage = app.lookup("ep1");
+		    embeddedPage.setPageProperty("_step", app);
+			if (embeddedPage.hasPageMethod("fn_stepValueSet")) {
+				var args = {
+					"STEP_DEPTH"  : app.lookup("dsStep").getValue(0, "STEP_DEPTH"),
+					"PROG_STAT"   : app.lookup("dsStep").getValue(0, "PROG_STAT"),
+					"DEPTH_GP_NM" : app.lookup("dsStep").getValue(0, "DEPTH_GP_NM")
+				}
+		        embeddedPage.callPageMethod("fn_stepValueSet", args);
+		    }
+		}
+	});
+}
+
+/*
+ * 그룹에서 mouseleave 이벤트 발생 시 호출.
+ * 사용자가 컨트롤 및 컨트롤의 자식 영역 바깥으로 마우스 포인터를 이동할 때 발생하는 이벤트.
+ */
+function onGroupMouseleave(e){
+	var group = e.control;
+	var vFloat = app.getAppProperty("detailData1");
+	app.getHostAppInstance().removeFloatingControl(vFloat);
+}
