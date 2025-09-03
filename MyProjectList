@@ -1,0 +1,1197 @@
+/************************************************
+ * Name  : MyProjectList.clx
+ * Title : 과제관리
+ * Desc  : 과제관리
+ ************************************************
+ * 수정일          이름              사유
+ ************************************************
+ * 2023. 08. 04.  1527431       최초 작성
+ * 2025. 05. 15.  1531361       수정(과제별 단계, 상태 및 결재자를 표기하는 프로세스 바 구현)
+ ************************************************/
+
+/************************************************
+ * 공통 모듈 선언
+ ************************************************/
+var util = createCommonUtil();
+
+/************************************************
+ * 전역 변수 선언
+ ************************************************/
+var userInfo = JSON.parse(sessionStorage.getItem("userInfo"));
+var authInfo = JSON.parse(localStorage.getItem("authInfo"));
+var userId  = userInfo.USER_ID;					// 사용자 ID
+var deptCd  = userInfo.DEPT_CD					// 부서코드
+var pgmId   = AppUtil.getScreenId(app, false);	// pgmId
+
+//20250515 장임용 추가
+var vcfloatform;
+var vcTaskNo;
+
+
+/************************************************
+ * init
+ ************************************************/
+function onBodyInit(e){
+}
+
+/************************************************
+ * 조회
+ ************************************************/
+function onBtnSearchClick(e){
+	// 조회버튼 권한이 없으면 종료
+	if(!RpmsUtil.getBtnAuth(app, "btnSearch")){
+	    return;
+	}
+	var btnSearch = e.control;
+	doSearch();
+}
+
+function doSearch() {
+	util.Submit.send(app, "subList", null, function(subSuccess) {
+		if (subSuccess) {
+			var pageRowCount = app.lookup("cmbRowCountSelect").value;
+			gridPaging(parseInt(pageRowCount, 10));
+
+			var tot = app.lookup("dsList").getValue(0, "TOTAL");
+			app.lookup("outPutTotal").value = tot;
+			//20250515 장임용 추가
+			vcTaskNo = app.lookup("dsList").getValue(0, "TASK_NO");
+		}
+	});
+}
+
+/************************************************
+ * 신규과제생성
+ ************************************************/
+function doCreate() {
+	// 저장버튼 권한이 없으면 종료
+	if(!RpmsUtil.getBtnAuth(app, "btnNew")){
+		return;
+	}
+
+	var url = "app/rpms/project/PrjProposal";  // 제안등록
+	
+	util.Dialog.open(app, url, 1850, 860, function(/** @type cpr.events.CUIEvent */e) {
+		var dialog = e.control;
+		var returnValue = dialog.returnValue;
+
+		app.lookup("btnSearch").click();
+	}, null);
+	
+}
+
+/************************************************
+ * popup설정
+ ************************************************/
+function f_openPopup(initValue) {
+	var pId   = "app/rpms/project/PrjProposal";      // 제안등록
+
+	var pId4G = "app/rpms/project/WbsMakeGenTaskNew";   // WBS설정(I.내부과제 > G.일반과제)
+	var pId4Q = "app/rpms/project/WbsMakeQukTask";   // WBS설정(I.내부과제 > Q.퀵과제)
+	var pId4R = "app/rpms/project/WbsMakeResTask";   // WBS설정(R.공동과제)
+	var pId4C = "app/rpms/project/WbsMakeCsnTask";   // WBS설정(C.위탁과제)
+	var pId4T = "app/rpms/project/WbsMakeTecTask";   // WBS설정(T.기술용역)
+	var pId4N = "app/rpms/project/WbsMakeNatTask";   // WBS설정(N.국책과제)
+	var pId4O = "app/rpms/project/WbsMakeOthTask";   // WBS설정(O.기타전문용역)
+
+	var pId5G = "app/rpms/project/WbsWrsltGenTaskNew";  // WBS결과등록(I.내부과제 > G.일반과제)
+	var pId5Q = "app/rpms/project/WbsWrsltQukTask";  // WBS결과등록(I.내부과제 > Q.퀵과제)
+	var pId5R = "app/rpms/project/WbsWrsltResTask";  // WBS결과등록(R.공동과제)
+	var pId5C = "app/rpms/project/WbsWrsltCsnTask";  // WBS결과등록(C.위탁과제)
+	var pId5T = "app/rpms/project/WbsWrsltTecTask";  // WBS결과등록(T.기술용역)
+	var pId5N = "app/rpms/project/WbsWrsltNatTask";  // WBS결과등록(N.국책과제)
+	var pId5O = "app/rpms/project/WbsWrsltOthTask";  // WBS결과등록(O.기타전문용역)
+	var url = "";
+
+	var taskNo = initValue["TASK_NO"];
+	var taskDepth = initValue["TASK_DEPTH"];
+	var taskDepthStat = initValue["TASK_DEPTH_STAT"];
+	var taskType = initValue["TASK_TYPE"];
+	var taskTypeGq = initValue["TASK_TYPE_GQ"];
+
+	var assignRndCtYn = initValue["ASSIGN_RND_CT_YN"];
+	var ngvYn = initValue["NGV_YN"];
+	var nPTaskYn = initValue["N_P_TASK_YN"];
+	var reviewProgStat = initValue["REVIEW_PROG_STAT"];
+
+	if (taskDepth == "2") {
+		if (taskType == "C") {
+			if (taskDepthStat == "A") {
+				initValue["pid"] = pId;
+				initValue["width"] = 1850;
+				initValue["height"] = 860;
+
+			}
+			else if (["B","C"].includes(taskDepthStat)) {
+				if (assignRndCtYn == "Y") {
+					if (ngvYn == "N") {  // 조건2
+						// 신규/저장/반려인 경우
+						if (ValueUtil.isNull(reviewProgStat) || ["A1","A2","A3"].includes(reviewProgStat)) {
+							initValue["pid"] = "app/rpms/project/PrjDocReviewRegDialog";
+							initValue["width"] = 780;
+							initValue["height"] = 730;
+						}
+					}
+				}
+				else if (assignRndCtYn == "N") {
+					if (ngvYn == "Y") {  // 조건3
+						// 신규/임시저장/반려인 경우
+						if (ValueUtil.isNull(reviewProgStat) || reviewProgStat >= "B1") {
+							initValue["pid"] = "app/rpms/project/PrjReviewRegDialog";
+							initValue["width"] = 1050;
+							initValue["height"] = 850;
+						}
+					}
+					else if (ngvYn == "N") {
+						if (nPTaskYn == "N") {  // 조건4
+							if (ValueUtil.isNull(reviewProgStat) || ["A1","A2","A3"].includes(reviewProgStat)) {
+								initValue["pid"] = "app/rpms/project/PrjDocReviewRegDialog";
+								initValue["width"] = 780;
+								initValue["height"] = 730;
+							}
+							else if (reviewProgStat >= "A4") {
+								initValue["pid"] = "app/rpms/project/PrjReviewRegDialog";
+								initValue["width"] = 1050;
+								initValue["height"] = 850;
+							} 
+						}
+						else if (nPTaskYn == "Y") {  // 조건5
+							// 신규/저장/반려인 경우
+							if (ValueUtil.isNull(reviewProgStat) || ["A1","A2","A3"].includes(reviewProgStat)) {
+								initValue["pid"] = "app/rpms/project/PrjDocReviewRegDialog";
+								initValue["width"] = 780;
+								initValue["height"] = 730;
+							}
+						}
+					}		
+				}
+			}
+		}
+		else if (taskType == "T") {
+			if (taskDepthStat == "A") {
+				initValue["pid"] = pId;
+				initValue["width"] = 1850;
+				initValue["height"] = 860;
+			}
+			else if (ngvYn == "N") {  // 조건2
+				if (ValueUtil.isNull(reviewProgStat) || ["A1","A2","A3"].includes(reviewProgStat)) {
+					initValue["pid"] = "app/rpms/project/PrjDocReviewRegDialog";
+					initValue["width"] = 780;
+					initValue["height"] = 730;
+				}
+			}
+		}
+		else if (taskType == "O") {
+			if (taskDepthStat == "A") {
+				initValue["pid"] = pId;
+				initValue["width"] = 1850;
+				initValue["height"] = 860;
+			}
+			else if (ValueUtil.isNull(reviewProgStat) || ["A1","A2","A3"].includes(reviewProgStat)) {
+				initValue["pid"] = "app/rpms/project/PrjDocReviewRegDialog";
+				initValue["width"] = 780;
+				initValue["height"] = 730;
+			}
+		}
+	}
+	else if (taskDepth == "4") {
+		if (taskType == "I") {
+			url = (taskTypeGq == "G") ? pId4G : pId4Q;
+		}
+		else if (taskType == "R") {	url = pId4R; }
+		else if (taskType == "N") {	url = pId4N; }
+		else if (taskType == "C") {	url = pId4C; }
+		else if (taskType == "T") {	url = pId4T; }
+		else if (taskType == "O") {	url = pId4O; }
+
+		initValue["pid"] = url;
+		initValue["width"] = 1850;
+		initValue["height"] = 860;
+	}
+	else if (taskDepth == "5") {
+		if (taskType == "I") {
+			url = (taskTypeGq == "G") ? pId5G : pId5Q;
+		}
+		else if (taskType == "R") {	url = pId5R; }
+		else if (taskType == "N") {	url = pId5N; }
+		else if (taskType == "C") {	url = pId5C; }
+		else if (taskType == "T") {	url = pId5T; }
+		else if (taskType == "O") {	url = pId5O; }
+
+		initValue["pid"] = url;
+		initValue["width"] = 1850;
+		initValue["height"] = 860;
+	}
+	else {
+		initValue["pid"] = pId;
+		initValue["width"] = 1850;
+		initValue["height"] = 860;
+	}
+
+	util.Dialog.open(app, initValue["pid"], initValue["width"], initValue["height"], function(/** @type cpr.events.CUIEvent */e) {
+		var dialog = e.control;
+		var returnValue = dialog.returnValue;
+		app.lookup("btnSearch").click();
+	}, initValue);
+}
+
+/************************************************
+ * 과제번호로 관련내용호출
+ ************************************************/
+function onGrd1RowDblclick(e){
+	var grd1 = e.control;
+	var rowIndex = e.rowIndex;
+	var cellIndex = e.cellIndex;
+	var obj = {};
+	
+	obj["TASK_NO"] = grd1.getCellValue(rowIndex, "TASK_NO");
+	obj["TASK_NM"] = grd1.getCellValue(rowIndex, "TASK_NM");
+	obj["TASK_TYPE"] = grd1.getCellValue(rowIndex, "TASK_TYPE");
+	obj["TASK_TYPE_GQ"] = grd1.getCellValue(rowIndex, "TASK_TYPE_GQ");
+	obj["TASK_DEPTH"] = grd1.getCellValue(rowIndex, "TASK_DEPTH");
+	obj["TASK_DEPTH_STAT"] = grd1.getCellValue(rowIndex, "TASK_DEPTH_STAT");
+	obj["ASSIGN_RND_CT_YN"] = grd1.getCellValue(rowIndex, "ASSIGN_RND_CT_YN");
+	obj["NGV_YN"] = grd1.getCellValue(rowIndex, "NGV_YN");
+	obj["N_P_TASK_YN"] = grd1.getCellValue(rowIndex, "N_P_TASK_YN");
+	obj["REVIEW_PROG_STAT"] = grd1.getCellValue(rowIndex, "REVIEW_PROG_STAT");
+	obj["OUTPUT_GP"] = grd1.getCellValue(rowIndex, "OUTPUT_GP");
+	obj["ACT_TASK_NO"] = grd1.getCellValue(rowIndex, "ACT_TASK_NO");
+	obj["TASK_METHODOLOGY_DETAIL"] = grd1.getCellValue(rowIndex, "TASK_METHODOLOGY_DETAIL");
+	obj["APPR_INDEX"] = grd1.getCellValue(rowIndex, "APPR_INDEX");
+	obj["APPR_PART"] = grd1.getCellValue(rowIndex, "APPR_PART");
+	obj["POP_TYPE"] = "CASE_1";
+	
+	f_openPopup(obj);
+}
+
+/*
+ * 루트 컨테이너에서 load 이벤트 발생 시 호출.
+ * 앱이 최초 구성된후 최초 랜더링 직후에 발생하는 이벤트 입니다.
+ */
+function onBodyLoad(e){
+	// 버튼권한적용
+	f_setBtnAuth();
+	RpmsUtil.makeDebugBtn(app);	// 'DEBUG' 버튼 생성
+	
+	var dmParam = app.lookup("dmParam");
+	dmParam.setValue("USER_ID", userId);
+
+	app.lookup("btnSearch").click();
+}
+
+/************************************************
+ * button auth
+ ************************************************/
+function f_setBtnAuth() {
+	// 조회
+	RpmsUtil.setBtnAuth(app, ["btnSearch"], authInfo.searchAuth, true);
+
+	// 저장(수정,레코드생성)
+	RpmsUtil.setBtnAuth(app, ["btnNew"], authInfo.createAuth, true);
+}
+
+
+/************************************************
+ * cell-click: 과제명칭(Link)
+ ************************************************/
+function onGrd1CellClick(e){
+	var grd1 = e.control;
+	var cellIndex = e.cellIndex;
+	var rowIndex = e.rowIndex;
+
+	var pId4G = "app/rpms/project/WbsMakeGenTaskNew";   // WBS설정(I.내부과제 > G.일반과제)
+	var pId4Q = "app/rpms/project/WbsMakeQukTask";   // WBS설정(I.내부과제 > Q.퀵과제)
+	var pId4R = "app/rpms/project/WbsMakeResTask";   // WBS설정(R.공동과제)
+	var pId4C = "app/rpms/project/WbsMakeCsnTask";   // WBS설정(C.위탁과제)
+	var pId4T = "app/rpms/project/WbsMakeTecTask";   // WBS설정(T.기술용역)
+	var pId4N = "app/rpms/project/WbsMakeNatTask";   // WBS설정(N.국책과제)
+	var pId4O = "app/rpms/project/WbsMakeOthTask";   // WBS설정(O.기타전문용역)
+
+	var pId5G = "app/rpms/project/WbsWrsltGenTaskNew";   // WBS설정(I.내부과제 > G.일반과제)
+	var pId5Q = "app/rpms/project/WbsWrsltQukTask";   // WBS설정(I.내부과제 > Q.퀵과제)
+	var pId5R = "app/rpms/project/WbsWrsltResTask";   // WBS설정(R.공동과제)
+	var pId5C = "app/rpms/project/WbsWrsltCsnTask";   // WBS설정(C.위탁과제)
+	var pId5T = "app/rpms/project/WbsWrsltTecTask";   // WBS설정(T.기술용역)
+	var pId5N = "app/rpms/project/WbsWrsltNatTask";   // WBS설정(N.국책과제)
+	var pId5O = "app/rpms/project/WbsWrsltOthTask";   // WBS설정(O.기타전문용역)
+
+	var columnName = grd1.detail.getColumn(cellIndex).columnName;
+
+//	obj["TASK_NO"] = grd1.getCellValue(rowIndex, "TASK_NO");
+//	obj["TASK_NM"] = grd1.getCellValue(rowIndex, "TASK_NM");
+//	obj["TASK_TYPE"] = grd1.getCellValue(rowIndex, "TASK_TYPE");
+//	obj["TASK_TYPE_GQ"] = grd1.getCellValue(rowIndex, "TASK_TYPE_GQ");
+//	obj["TASK_DEPTH"] = grd1.getCellValue(rowIndex, "TASK_DEPTH");
+//	obj["TASK_DEPTH_STAT"] = grd1.getCellValue(rowIndex, "TASK_DEPTH_STAT");
+
+	app.getRootAppInstance().removeFloatingControl(vcfloatform);
+	
+	if (columnName == "C_TASK_NM") {
+		// 조회버튼 권한이 없으면 종료
+		if(!RpmsUtil.getBtnAuth(app, "btnSearch")){
+			return;
+		}
+
+		var initValue = {};
+		initValue["HOST_TYPE"] = "WRSLT";
+		initValue["TASK_NO"] = grd1.getCellValue(rowIndex, "TASK_NO");
+		initValue["TASK_NM"] = grd1.getCellValue(rowIndex, "TASK_NM");
+		initValue["TASK_TYPE"] = grd1.getCellValue(rowIndex, "TASK_TYPE");
+		initValue["taskDepth"] = grd1.getCellValue(rowIndex, "TASK_DEPTH");
+		initValue["cTaskDetail"] = grd1.getCellValue(rowIndex, "C_TASK_DETAIL");
+		initValue["OUTPUT_GP"] = grd1.getCellValue(rowIndex, "OUTPUT_GP");
+		initValue["VISIBLE"] = "F";
+		initValue["POP_TYPE"] = "CASE_2";
+
+		var taskType = initValue["TASK_TYPE"];
+		var cTaskDetail = initValue["cTaskDetail"];
+		var taskTypeGq = grd1.getCellValue(rowIndex, "TASK_TYPE_GQ");
+		var url = "";
+		
+		if (cTaskDetail == "A1") {  // A1.과제기본
+			initValue["pid"] = "app/rpms/project/PrjProposal";
+			initValue["width"] = 1850;
+			initValue["height"] = 860;
+		}
+		else if (cTaskDetail == "A2") { // A2.과제심의자료검토
+			initValue["pid"] = "app/rpms/project/PrjDocReviewRegDialog";
+			initValue["width"] = 780;
+			initValue["height"] = 730;
+		}
+		else if (cTaskDetail == "A3") { // A3.과제심의정보
+			initValue["pid"] = "app/rpms/project/PrjReviewRegDialog";
+			initValue["width"] = 1050;
+			initValue["height"] = 850;
+		}
+		else if (cTaskDetail == "A4") { // A4.과제생성
+			if (taskType == "I") {
+				url = (taskTypeGq == "G") ? pId4G : pId4Q;
+			}
+			else if (taskType == "R") {	url = pId4R; }
+			else if (taskType == "N") {	url = pId4N; }
+			else if (taskType == "C") {	url = pId4C; }
+			else if (taskType == "T") {	url = pId4T; }
+			else if (taskType == "O") {	url = pId4O; }
+	
+			initValue["pid"] = url;
+			initValue["width"] = 1850;
+			initValue["height"] = 860;
+		}
+		else if (cTaskDetail == "A5") { // A5.과제수행
+			if (taskType == "I") {
+				url = (taskTypeGq == "G") ? pId5G : pId5Q;
+			}
+			else if (taskType == "R") {	url = pId5R; }
+			else if (taskType == "N") {	url = pId5N; }
+			else if (taskType == "C") {	url = pId5C; }
+			else if (taskType == "T") {	url = pId5T; }
+			else if (taskType == "O") {	url = pId5O; }
+	
+			initValue["pid"] = url;
+			initValue["width"] = 1850;
+			initValue["height"] = 860;
+			
+		 	if (initValue["taskDepth"] == "6") {
+				initValue["HOST_TYPE"] = "";  // 과제수행의 경우, 현재상태가 과제 결재(진행중)인 경우 내용수정이 가능  
+		 	}
+		}
+		else if (cTaskDetail == "A6") { // A6.과제제안검토(PMO/팀장)
+			initValue["pid"] = "app/rpms/project/PrjApprvStatPp";
+			initValue["width"] = 600;
+			initValue["height"] = 270;
+		}
+		
+		util.Dialog.open(app, initValue["pid"], initValue["width"], initValue["height"], function(e) {
+			var dialog = e.control;
+			var returnValue = dialog.returnValue;
+			
+			// refresh처리를 하지 않고,변경된 콤보값을 default처리한다.
+			// (데이터 값이 변경될시에 레코드 색상이 변경되는데 이를 방지하기위함)
+			grd1.revertRowData(rowIndex);
+		}, initValue);
+	}
+	else if (columnName == "C_TASK_DEPTH_NM") {
+		// 저장버튼 권한이 없으면 종료
+		if(!RpmsUtil.getBtnAuth(app, "btnNew")){
+			return;
+		}
+		
+		var vTASK_TYPE = e.row.getValue("TASK_TYPE");	// 과제유형
+		
+		if("C" == vTASK_TYPE){			// 위탁연구용역
+			apprRPRAC1(e);
+		}else if("T" == vTASK_TYPE){	// 기술자문용역
+			apprRPRAT1(e);
+		}else if("O" == vTASK_TYPE){	// 기타전문용역
+			apprRPRAO1(e);
+		}else if("N" == vTASK_TYPE){	// 국책과제
+			apprRPRAN1(e);
+		}else{
+			onGrd1RowDblclick(e);	// 관련내용호출
+		}
+	} //20250515 장임용 추가
+	else if (columnName == "C_PROG_STAT_NM") {
+		vcTaskNo = grd1.getCellValue(rowIndex, "TASK_NO");
+		if(RpmsUtil.nvl(vcTaskNo, "True") == "True") {
+			return;
+		}
+		
+		var voPos = {
+			"x": e.clientX,
+			"y": e.clientY
+		};
+	
+		vcfloatform = new udc.com.PrjFloatControl("vcfloat");
+		vcfloatform.style.css({
+			"box-shadow" : "1px 4px 5px 1px rgba(0,0,0,0.75)",
+			"border-radius" : "5px",
+			"background-color" : "white"
+		});
+		
+		vcfloatform.setAppProperty("detailData", vcTaskNo);
+		vcfloatform.setAppProperty("detailData1", vcfloatform);
+	
+		app.getRootAppInstance().floatControl(vcfloatform, {
+			top : voPos.y > 800 ? "650px" : (voPos.y + 30) + "px",
+			left : (voPos.x - 400)  + "px",
+			width : "1580px",
+			height : "142px"
+		});
+	}
+}
+
+/************************************************
+ * 결재상신
+ ************************************************/
+function doAppr(pTASK_NO, pApprovalNo, pBusinessCode, pTitle, pDEPTH_GP){
+	// debugger
+	var dmTaskBaseInfo = app.lookup("dmTaskBaseInfo");
+	dmTaskBaseInfo.setValue("TASK_NO", pTASK_NO);
+	
+	var param1 = RpmsUtil.encrypt(app, userId						);	// 암호화 : 사번
+	var param2 = RpmsUtil.encrypt(app, pBusinessCode				);	// 암호화 : 업무코드
+	var param3 = RpmsUtil.encrypt(app, pTASK_NO						);	// 암호화 : 과제번호
+	
+	var vURL = "";
+	if("http:" == location.protocol){	// local
+		vURL = location.origin + "/HdsTechRpms/appr/aprUrlView.do?param1="+param1+"&param2="+param2+"&param3="+param3;
+	}else{								// 개발, 운영
+		vURL = location.origin + "/appr/aprUrlView.do?param1="+param1+"&param2="+param2+"&param3="+param3;
+	}
+	
+	var dmAppr079Param = app.lookup("dmAppr079Param");
+	
+	// 통합결재 송신용
+	dmAppr079Param.setValue("systemCode"			, 'RP'							); // 시스템코드(필수)
+	dmAppr079Param.setValue("moduleCode"			, 'RA'							); // 모듈코드(필수)
+	dmAppr079Param.setValue("businessCode"			, pBusinessCode					); // 업무코드(필수)
+	dmAppr079Param.setValue("approvalNo"			, pApprovalNo					); // 결재선번호
+	dmAppr079Param.setValue("documentNo"			, pTASK_NO+":"+pDEPTH_GP		); // 문서번호
+	dmAppr079Param.setValue("drafterUserId"			, userId						); // 기안자ID(필수)
+	dmAppr079Param.setValue("drafterDepartmentCode"	, deptCd						); // 기안자부서코드(필수)
+	dmAppr079Param.setValue("documentSubject"		, pTitle						); // 문서제목(필수)
+	dmAppr079Param.setValue("otherSystemUrl"		, vURL                          ); // 본문URL
+	dmAppr079Param.setValue("PGM_ID"				, pgmId							); // 프로그램ID
+	
+	// 변경심의/사유 저장
+	RpmsUtil.confirm(app, "", "결재요청 하시겠습니까?", function(result){
+		if(!result){
+			return;
+		}
+		
+		util.Submit.send(app, "sendInBpm079", null, function(subSuccess) {
+			if (subSuccess) {
+				var dmResult = app.lookup("dmResult");
+				var vRESULT_CD  		= dmResult.getValue("RESULT_CD"			);	// 처리결과
+			    var vRESULT_MSG 		= dmResult.getValue("RESULT_MSG"		);	// 메세지
+				var vAPPROVAL_DOC_NO	= dmResult.getValue("APPROVAL_DOC_NO"	);	// 결재요청번호
+				
+				// 메세지출력
+				if(vRESULT_CD == "SUCC"){	// 성공
+					RpmsUtil.alert(app, vRESULT_MSG, function(e){
+						
+						if(ValueUtil.isNull(vAPPROVAL_DOC_NO)){
+							RpmsUtil.alert(app, "통합결재문서번호 발번에 실패했습니다.", function(e){}, 'warn');	// success / warn / error
+							return;
+						}else{
+								var dmBpmInfo = app.lookup("dmBpmInfo");
+								RpmsUtil.getBpmPropertieValue(app, dmBpmInfo.id);	// 통합결재 url get
+								var bpmUrl = dmBpmInfo.getValue("url");
+								
+								var sOption = 'top=100, left=150, width=1400, height=900, status=no, menubar=no, toolbar=no, resizable=yes';
+								var win = window.open(bpmUrl + "/appDoc/DrafterApprovalDocPop.do?draftRequestNo="+vAPPROVAL_DOC_NO, 'winPop_c20wf', sOption);
+						}
+						//https://wfweb-qas.hyundai-steel.com/appDoc/DrafterApprovalDocPop.do?draftRequestNo=QM-QD-SP-A-202308-0003
+						
+					}, 'success');	// success / warn / error
+				}else{
+					RpmsUtil.alert(app, vRESULT_MSG, function(e){}, 'warn');	// success / warn / error
+					return;
+				}
+			}
+		});
+	});
+	
+}
+
+
+// 결재전송할 HTML 만들기
+function makeHTML(pTaskNo, pContent) {
+	var linkURL = "";
+	if("http" == location.protocol){	// local
+		linkURL = location.origin + "/HdsTechRpms/project/myList/linkMyProjectList.do?TASK_NO=" + pTaskNo + "&HOST_TYPE=WRSLT";
+	}else{								// 개발, 운영
+		linkURL = location.origin + "/project/myList/linkMyProjectList.do?TASK_NO=" + pTaskNo + "&HOST_TYPE=WRSLT";
+	}
+	
+	var vHtml = "";		// html 코드
+	
+	var dmTaskBaseInfo = app.lookup("dmTaskBaseInfo");	// 기본정보
+	var dmTaskBaseCmsn = app.lookup("dmTaskBaseCmsn");	// 위탁과제
+	
+	var vTASK_NM				= dmTaskBaseInfo.getValue("TASK_NM"			);	// 과제명
+	var vTASK_START_DATE		= dmTaskBaseInfo.getValue("TASK_START_DATE2");	// 과제기간
+	var vTASK_END_DATE			= dmTaskBaseInfo.getValue("TASK_END_DATE2"	);	// 과제기간
+	var vTASK_DATE = vTASK_START_DATE + ' ~ ' + vTASK_END_DATE;
+	var vACT_BACKGROUND			= dmTaskBaseInfo.getValue("ACT_BACKGROUND"	);	// 수행배경
+	var vACT_CONTENTS			= dmTaskBaseInfo.getValue("ACT_CONTENTS"	);	// 수행내용
+	var vEXPECT_EFFECT			= dmTaskBaseInfo.getValue("EXPECT_EFFECT"	);	// 기대효과
+	var vASSIGN_RND_CT_YN		= dmTaskBaseCmsn.getValue("ASSIGN_RND_CT_YN");	// 지정연구실여부
+	var vNGV_YN					= dmTaskBaseCmsn.getValue("NGV_YN"			);	// NGV여부
+	var vN_P_TASK_YN			= dmTaskBaseCmsn.getValue("N_P_TASK_YN"		);	// 국책과제여부
+	var vR_D_ORGAN				= dmTaskBaseCmsn.getValue("R_D_ORGAN"		);	// 연구기관
+	var vDIR_RND_CT				= dmTaskBaseCmsn.getValue("DIR_RND_CT"		);	// 소속연구실
+	var vCHARGER_PROF			= dmTaskBaseCmsn.getValue("CHARGER_PROF"	);	// 담당자(교수)
+	
+	//	vHtml += '<html><head>';
+	vHtml += '<style type="text/css">';
+	vHtml += '	table {border-collapse: collapse;border: 0;}';
+	vHtml += '	th { border: 1px solid #ddd; font-size: 13px; font-weight: 700;}';
+	vHtml += '	td { border: 1px solid #ddd; font-size: 13px;}';
+	vHtml += '	th{text-align: center;}	td {text-align: left;}';
+	vHtml += '	tbody {z-index: 10;position: relative;}';
+	vHtml += '	thead th,	tbody th {background-color: #e7eaea;}';
+	vHtml += '</style>';
+	vHtml += '</head>';
+	// 본문
+	vHtml += '<body style="width: 100%; margin:0px; padding:0px;">'
+	vHtml += '<table style="width: 100%; margin:0px; padding:0px;">';
+	vHtml += '<tbody>';
+	vHtml += '	<tr>';
+	vHtml += '		<th style="width: 10%;">과제명</th>';
+	vHtml += '		<td style="width: 90%; font-size: 12px; font-weight: 400 !important;">' + vTASK_NM + '</td>';
+	vHtml += '	</tr>';
+	vHtml += '	<tr>';
+	vHtml += '		<th style="width: 10%;">과제기간</th>';
+	vHtml += '		<td style="width: 90%; font-size: 12px; font-weight: 400 !important;">' + vTASK_DATE + '</td>';
+	vHtml += '	</tr>';
+	vHtml += '	<tr>';
+	vHtml += '		<th style="width: 10%;">수행배경</th>';
+	vHtml += '<td><textarea rows="5" style="width: 100%; border: none; color: #555555; font-size: 12px; font-weight: 400 !important; font-family: Malgun gothic;" readonly="readonly">' + vACT_BACKGROUND + '</textarea>';
+	vHtml += '	</td></tr>';
+	vHtml += '	<tr>';
+	vHtml += '		<th style="width: 10%;">수행내용</th>';
+	vHtml += '<td><textarea rows="5" style="width: 100%; border: none; color: #555555; font-size: 12px; font-weight: 400 !important; font-family: Malgun gothic;" readonly="readonly">' + vACT_CONTENTS + '</textarea>';
+	vHtml += '	</td></tr>';
+	vHtml += '		<th style="width: 10%;">기대효과</th>';
+	vHtml += '<td><textarea rows="5" style="width: 100%; border: none; color: #555555; font-size: 12px; font-weight: 400 !important; font-family: Malgun gothic;" readonly="readonly">' + vEXPECT_EFFECT + '</textarea>';
+	vHtml += '	</td></tr>';
+	vHtml += '	<tr>';
+	vHtml += '		<th style="width: 10%;">지정연구실</th>';
+	vHtml += '		<td style="width: 90%; font-size: 12px; font-weight: 400 !important;">' + (vASSIGN_RND_CT_YN == 'true' ? '지정' : '비지정') + '</td>';
+	vHtml += '	</tr>';
+	vHtml += '	<tr>';
+	vHtml += '		<th style="width: 10%;">NGV</th>';
+	vHtml += '		<td style="width: 90%; font-size: 12px; font-weight: 400 !important;">' + (vNGV_YN == 'true' ? '지정' : '비지정') + '</td>';
+	vHtml += '	</tr>';
+	vHtml += '	<tr>';
+	vHtml += '		<th style="width: 10%;">국책과제</th>';
+	vHtml += '		<td style="width: 90%; font-size: 12px; font-weight: 400 !important;">' + (vN_P_TASK_YN == 'true' ? '지정' : '비지정') + '</td>';
+	vHtml += '	</tr>';
+	vHtml += '	<tr>';
+	vHtml += '		<th style="width: 10%;">용역기관</th>';
+	vHtml += '		<td style="width: 90%; font-size: 12px; font-weight: 400 !important;">' + vR_D_ORGAN + ' / ' + vDIR_RND_CT + ' / ' + vCHARGER_PROF + '</td>';
+	vHtml += '	</tr>';
+	vHtml += '	<tr>';
+	vHtml += '		<th style="width: 10%;">과제비</th>';
+	vHtml += '<td><textarea rows="12" style="width: 100%; border: none; color: #555555; font-size: 12px; font-weight: 400 !important; font-family: Malgun gothic;" readonly="readonly">' + '' + '</textarea>';
+	vHtml += '	</td></tr>';
+	vHtml += '	<tr>';
+	vHtml += '		<th style="width: 10%;">예산계정</th>';
+	vHtml += '		<td style="width: 90%; font-size: 12px; font-weight: 400 !important;">' + '' + '</td>';
+	vHtml += '	</tr>';
+	vHtml += '	<tr>';
+	vHtml += '		<th style="width: 10%;">파일첨부</th>';
+	vHtml += '<td><textarea rows="8" style="width: 100%; border: none; color: #555555; font-size: 12px; font-weight: 400 !important; font-family: Malgun gothic;" readonly="readonly">' + '' + '</textarea>';
+	vHtml += '	</td></tr>';
+	vHtml += '		<th style="width: 10%;">상세정보</th>';
+	vHtml += '		<td>';
+	vHtml += '<a style="cursor: pointer; color: blue; font-size: 12px; font-weight: bold;" href="'+ linkURL + '">RPMS 과제제안 페이지 링크</a>';
+	vHtml += '</td></tr>';
+	vHtml += '</tbody>';
+	vHtml += '</table>';
+	vHtml += '</body></html>'
+	
+	console.log("vHtml : "+vHtml);
+    return vHtml;
+}
+
+
+/**
+ * 페이지인덱서 컨트롤을 사용하여 그리드의 데이터를 페이징합니다.
+ * @param {Number} vnPageRow
+ */
+function gridPaging(nPageRowCount) {
+	var gridId = app.lookup("grd1");
+	var pageIndexer = app.lookup("pageIndexer");
+	var currentPageIndex = pageIndexer.currentPageIndex;
+	
+	// 넘버 에디터에 입력된 수로 페이지 인덱서의 pageRowCount를 지정합니다.
+	pageIndexer.pageRowCount = nPageRowCount;
+	pageIndexer.redraw();
+	
+	// page의 첫번째행번호(startRowIndex), 마지막행번호(endRowIndex)
+	var startRowIndex = (currentPageIndex - 1) * pageIndexer.pageRowCount;
+	var endRowIndex = currentPageIndex * pageIndexer.pageRowCount;
+
+	// 페이징이 될 때마다 그리드의 첫번째 행번호를 지정한다.
+	gridId.rowIndexerStartNum = (startRowIndex + 1);
+	
+	// filter조건을 통해 그리드를 페이징한다.
+	gridId.setFilter(startRowIndex + " < index && index <= " + endRowIndex);
+}
+
+/*
+ * 페이지 인덱서에서 selection-change 이벤트 발생 시 호출.
+ * Page index를 선택하여 선택된 페이지가 변경된 후에 발생하는 이벤트.
+ */
+/************************************************
+ * 페이지 인덱서에서 페이지선택
+ ************************************************/
+function onPageIndexerSelectionChange(e){
+	var pageIndexer = e.control;
+	gridPaging(app.lookup("pageIndexer").pageRowCount);
+}
+
+/************************************************
+ * 페이지 rowCount
+ ************************************************/
+function onCmbRowCountSelectSelectionChange(e){
+	var cmbRowCountSelect = e.control;
+	
+	gridPaging(parseInt(cmbRowCountSelect.value, 10));
+}
+
+/************************************************
+ * 결재상신 : 위탁연구용역 착수/중간/완료 품의
+ ************************************************/
+function apprRPRAC1(e){
+	// debugger
+	var vTASK_DEPTH = e.row.getValue("TASK_DEPTH");
+	var vDEPTH_GP   = e.row.getValue("DEPTH_GP").substring(0, 3); // C20 : 중간 / C30 : 완료
+	var vAPPR_INDEX = e.row.getValue("APPR_INDEX");
+	
+	// 2023.09.25 민종근 수정 -> 단계 별 팝업
+	switch(vTASK_DEPTH){ // 상태
+		case "3" :		// 과제결재 (승인대기) // 착수
+		case "6" :		// 과제결재 (승인대기) // 중간, 완료
+			
+			var vTASK_DEPTH_STAT = e.row.getValue("TASK_DEPTH_STAT");	// (결재)진행상태
+			
+			/* ************************* 진행상태 에러체크 START ***************************/
+			
+			// B 승인대기
+			if(vTASK_DEPTH_STAT == "B"){
+				RpmsUtil.alert(app, "승인대기 중입니다.", function(e){}, 'warn');	// success / warn / error
+				return;
+			}
+			
+			// E 승인
+			if(vTASK_DEPTH_STAT == "E"){
+				RpmsUtil.alert(app, "이미 승인 되었습니다.", function(e){}, 'warn');	// success / warn / error
+				return;
+			}
+			
+			// C 반려
+			if(vTASK_DEPTH_STAT == "C"){
+				RpmsUtil.confirm(app, "", "결재가 반려 되었습니다. 다시 결재요청 하시겠습니까?", function(result){
+					if(!result){
+						return;
+					}
+				});
+			}
+			
+			/* ************************** 진행상태 에러체크 END ****************************/
+			
+			
+			/* 업무코드 ***************
+				C1	위탁연구용역 착수 품의
+				C2	위탁연구용역 중간 품의
+				C3	위탁연구용역 완료 품의
+				C4	위탁연구용역 취소 품의
+				C5	위탁연구용역 변경 품의 
+			************************/
+			var vBusinessCode	= "";	// 결재업무코드 
+			var vTitle			= "";	// 결재제목
+			
+			if(vTASK_DEPTH == "3"){
+				vBusinessCode	= "C1";
+				vTitle			= "위탁연구용역 착수 품의";
+			}else{
+				if(vDEPTH_GP == "C20"){
+					vBusinessCode	= "C2";
+					vTitle			= "위탁연구용역 중간 품의";
+				}else if(vDEPTH_GP == "C30"){
+					vBusinessCode	= "C3";
+					vTitle			= "위탁연구용역 완료 품의";
+					
+				}else{
+					RpmsUtil.confirm(app, "", "WBS 단계를 찾을 수 없습니다.", function(result){});
+					return;
+				}
+			}
+			
+			
+			// 결재 내용 작성 popup
+			var initValue   = {
+				  "systemCode" 		: "RP"
+				, "moduleCode" 		: "RA"
+				, "businessCode"	: vBusinessCode	// 업무코드
+				, "initApprovalNo"  : vAPPR_INDEX // 결재선
+			};
+			
+			var pOpen   = "modal";
+			var pId     = "app/rpms/appr/ApprLineSelectPop";	// 결재선선택POPUP
+		    
+		    util.Dialog.open(app, pId, 450, 240, function(/** @type cpr.events.CUIEvent */ ee) {
+				var dialog = ee.control;
+				var returnValue = dialog.returnValue;
+				var approvalNo	= returnValue.approvalNo;		// 결재선번호
+		    	
+				doAppr( e.row.getValue("TASK_NO"), approvalNo, vBusinessCode, vTitle, vDEPTH_GP);	// 결재상신호출
+			}, initValue);
+		    
+			break;
+		default :
+			onGrd1RowDblclick(e);	// 관련내용호출
+			break;
+	}
+}
+
+
+/************************************************
+ * 결재상신 : 기술자문용역 착수/중간/완료 품의
+ ************************************************/
+function apprRPRAT1(e){
+	// debugger
+	var vTASK_DEPTH = e.row.getValue("TASK_DEPTH"	);
+	var vDEPTH_GP   = e.row.getValue("DEPTH_GP"	).substring(0, 3); // T20 : 중간 / T30 : 완료
+	var vAPPR_INDEX = e.row.getValue("APPR_INDEX");
+	
+	// 2023.09.25 민종근 수정 -> 단계 별 팝업
+	switch(vTASK_DEPTH){ // 상태
+		case "3" :		// 과제결재 (승인대기) // 착수
+		case "6" :		// 과제결재 (승인대기) // 중간, 완료
+			
+			var vTASK_DEPTH_STAT = e.row.getValue("TASK_DEPTH_STAT");	// (결재)진행상태
+			
+			/* ************************* 진행상태 에러체크 START ***************************/
+			
+			// B 승인대기
+			if(vTASK_DEPTH_STAT == "B"){
+				RpmsUtil.alert(app, "승인대기 중입니다.", function(e){}, 'warn');	// success / warn / error
+				return;
+			}
+			
+			// E 승인
+			if(vTASK_DEPTH_STAT == "E"){
+				RpmsUtil.alert(app, "이미 승인 되었습니다.", function(e){}, 'warn');	// success / warn / error
+				return;
+			}
+			
+			// C 반려
+			if(vTASK_DEPTH_STAT == "C"){
+				RpmsUtil.confirm(app, "", "결재가 반려 되었습니다. 다시 결재요청 하시겠습니까?", function(result){
+					if(!result){
+						return;
+					}
+				});
+			}
+			
+			/* ************************** 진행상태 에러체크 END ****************************/
+			
+			
+			/* 업무코드 ***************
+				T1	기술자문용역 착수 품의
+				T2	기술자문용역 중간 품의
+				T3	기술자문용역 완료 품의
+				T4	기술자문용역 취소 품의
+				T5	기술자문용역 변경 품의 
+			************************/
+			var vBusinessCode	= "";	// 결재업무코드 
+			var vTitle			= "";	// 결재제목
+			
+			if(vTASK_DEPTH == "3"){
+				vBusinessCode	= "T1";
+				//vTitle			= "기술자문용역 착수 품의";
+			}else{
+				if(vDEPTH_GP == "T20"){
+					vBusinessCode	= "T2";
+					//vTitle			= "기술자문용역 중간 품의";
+				}else if(vDEPTH_GP == "T30"){
+					vBusinessCode	= "T3";
+					//vTitle			= "기술자문용역 완료 품의";
+					
+				}else{
+					RpmsUtil.confirm(app, "", "WBS 단계를 찾을 수 없습니다.", function(result){});
+					return;
+				}
+			}
+			
+			// 2024.03.18 김용민전임요청 > 제목 공란 변경
+			vTitle = "";
+			
+			// 결재 내용 작성 popup
+			var initValue   = {
+				  "systemCode" 		: "RP"
+				, "moduleCode" 		: "RA"
+				, "businessCode"	: vBusinessCode	// 업무코드
+				, "initApprovalNo"  : vAPPR_INDEX // 결재선
+			};
+			
+			var pOpen   = "modal";
+			var pId     = "app/rpms/appr/ApprLineSelectPop";	// 결재선선택POPUP
+		    
+		    util.Dialog.open(app, pId, 450, 240, function(/** @type cpr.events.CUIEvent */ ee) {
+				var dialog = ee.control;
+				var returnValue = dialog.returnValue;
+				var approvalNo	= returnValue.approvalNo;		// 결재선번호
+		    	
+				doAppr( e.row.getValue("TASK_NO"), approvalNo, vBusinessCode, vTitle, vDEPTH_GP);	// 결재상신호출
+			}, initValue);
+		    
+			break;
+		default :
+			onGrd1RowDblclick(e);	// 관련내용호출
+			break;
+	}
+}
+
+
+/************************************************
+ * 결재상신 : 기타전문용역 착수/중간/완료 품의
+ ************************************************/
+function apprRPRAO1(e){
+	// debugger
+	var vTASK_DEPTH = e.row.getValue("TASK_DEPTH"	);
+	var vDEPTH_GP   = e.row.getValue("DEPTH_GP"	).substring(0, 3); // O20 : 중간 / O30 : 완료
+	var vAPPR_INDEX = e.row.getValue("APPR_INDEX");
+	
+	// 2023.09.25 민종근 수정 -> 단계 별 팝업
+	switch(vTASK_DEPTH){ // 상태
+		case "3" :		// 과제결재 (승인대기) // 착수
+		case "6" :		// 과제결재 (승인대기) // 중간, 완료
+			
+			var vTASK_DEPTH_STAT = e.row.getValue("TASK_DEPTH_STAT");	// (결재)진행상태
+			
+			/* ************************* 진행상태 에러체크 START ***************************/
+			
+			// B 승인대기
+			if(vTASK_DEPTH_STAT == "B"){
+				RpmsUtil.alert(app, "승인대기 중입니다.", function(e){}, 'warn');	// success / warn / error
+				return;
+			}
+			
+			// E 승인
+			if(vTASK_DEPTH_STAT == "E"){
+				RpmsUtil.alert(app, "이미 승인 되었습니다.", function(e){}, 'warn');	// success / warn / error
+				return;
+			}
+			
+			// C 반려
+			if(vTASK_DEPTH_STAT == "C"){
+				RpmsUtil.confirm(app, "", "결재가 반려 되었습니다. 다시 결재요청 하시겠습니까?", function(result){
+					if(!result){
+						return;
+					}
+				});
+			}
+			
+			/* ************************** 진행상태 에러체크 END ****************************/
+			
+			
+			/* 업무코드 ***************
+				O1	기타전문용역 착수 품의
+				O2	기타전문용역 중간 품의
+				O3	기타전문용역 완료 품의
+				O4	기타전문용역 취소 품의
+				O5	기타전문용역 변경 품의 
+			************************/
+			var vBusinessCode	= "";	// 결재업무코드 
+			var vTitle			= "";	// 결재제목
+			
+			if(vTASK_DEPTH == "3"){
+				vBusinessCode	= "O1";
+				vTitle			= "기타전문용역 착수 품의";
+			}else{
+				if(vDEPTH_GP == "O20"){
+					vBusinessCode	= "O2";
+					vTitle			= "기타전문용역 중간 품의";
+				}else if(vDEPTH_GP == "O30"){
+					vBusinessCode	= "O3";
+					vTitle			= "기타전문용역 완료 품의";
+					
+				}else{
+					RpmsUtil.confirm(app, "", "WBS 단계를 찾을 수 없습니다.", function(result){});
+					return;
+				}
+			}
+			
+			
+			// 결재 내용 작성 popup
+			var initValue   = {
+				  "systemCode" 		: "RP"
+				, "moduleCode" 		: "RA"
+				, "businessCode"	: vBusinessCode	// 업무코드
+				, "initApprovalNo"  : vAPPR_INDEX // 결재선
+			};
+			
+			var pOpen   = "modal";
+			var pId     = "app/rpms/appr/ApprLineSelectPop";	// 결재선선택POPUP
+		    
+		    util.Dialog.open(app, pId, 450, 240, function(/** @type cpr.events.CUIEvent */ ee) {
+				var dialog = ee.control;
+				var returnValue = dialog.returnValue;
+				var approvalNo	= returnValue.approvalNo;		// 결재선번호
+		    	
+				doAppr( e.row.getValue("TASK_NO"), approvalNo, vBusinessCode, vTitle, vDEPTH_GP);	// 결재상신호출
+			}, initValue);
+		    
+			break;
+		default :
+			onGrd1RowDblclick(e);	// 관련내용호출
+			break;
+	}
+}
+
+
+/************************************************
+ * 결재상신 : 국책과제 착수/완료 품의
+ ************************************************/
+function apprRPRAN1(e){
+	// debugger
+	var vTASK_DEPTH = e.row.getValue("TASK_DEPTH"	);
+	var vDEPTH_GP   = e.row.getValue("DEPTH_GP"	).substr(2, 3); // N30 : 완료
+	var vAPPR_INDEX = e.row.getValue("APPR_INDEX");
+	
+	// 2023.09.25 민종근 수정 -> 단계 별 팝업
+	switch(vTASK_DEPTH){ // 상태
+		case "3" :		// 과제결재 (승인대기) // 착수
+		case "6" :		// 과제결재 (승인대기) // 중간, 완료
+			
+			var vTASK_DEPTH_STAT = e.row.getValue("TASK_DEPTH_STAT");	// (결재)진행상태
+			
+			/* ************************* 진행상태 에러체크 START ***************************/
+			
+			// B 승인대기
+			if(vTASK_DEPTH_STAT == "B"){
+				RpmsUtil.alert(app, "승인대기 중입니다.", function(e){}, 'warn');	// success / warn / error
+				return;
+			}
+			
+			// E 승인
+			if(vTASK_DEPTH_STAT == "E"){
+				RpmsUtil.alert(app, "이미 승인 되었습니다.", function(e){}, 'warn');	// success / warn / error
+				return;
+			}
+			
+			// C 반려
+			if(vTASK_DEPTH_STAT == "C"){
+				RpmsUtil.confirm(app, "", "결재가 반려 되었습니다. 다시 결재요청 하시겠습니까?", function(result){
+					if(!result){
+						return;
+					}
+				});
+			}
+			
+			/* ************************** 진행상태 에러체크 END ****************************/
+			
+			
+			/* 업무코드 ***************
+				N1	국책과제 착수 품의
+				N2	국책과제 완료 품의
+				N3	국책과제 취소 품의
+				N4	국책과제 변경 품의
+			************************/
+			var vBusinessCode	= "";	// 결재업무코드 
+			var vTitle			= "";	// 결재제목
+			
+			if(vTASK_DEPTH == "3"){
+				vBusinessCode	= "N1";
+				vTitle			= "국책과제 착수 품의";
+			}else{
+				if(vDEPTH_GP == "N30"){
+					vBusinessCode	= "N2";
+					vTitle			= "국책과제 완료 품의";
+				}else{
+					//RpmsUtil.confirm(app, "", "WBS 단계를 찾을 수 없습니다.", function(result){});
+					return;
+				}
+			}
+			
+			
+			// 결재 내용 작성 popup
+			var initValue   = {
+				  "systemCode" 		: "RP"
+				, "moduleCode" 		: "RA"
+				, "businessCode"	: vBusinessCode	// 업무코드
+				, "initApprovalNo"  : vAPPR_INDEX // 결재선
+			};
+			
+			var pOpen   = "modal";
+			var pId     = "app/rpms/appr/ApprLineSelectPop";	// 결재선선택POPUP
+		    
+		    util.Dialog.open(app, pId, 450, 240, function(/** @type cpr.events.CUIEvent */ ee) {
+				var dialog = ee.control;
+				var returnValue = dialog.returnValue;
+				var approvalNo	= returnValue.approvalNo;		// 결재선번호
+		    	
+				doAppr( e.row.getValue("TASK_NO"), approvalNo, vBusinessCode, vTitle, vDEPTH_GP);	// 결재상신호출
+			}, initValue);
+		    
+			break;
+		default :
+			onGrd1RowDblclick(e);	// 관련내용호출
+			break;
+	}
+}
+
+/*
+ * 콤보 박스에서 click 이벤트 발생 시 호출.
+ * 사용자가 컨트롤을 클릭할 때 발생하는 이벤트.
+ */
+function onCmbGridTaskDetailClick(e){
+	var cmbGridTaskDetail = e.control;
+	
+	var gridId = app.lookup("grd1");
+	var rowIndex = gridId.getSelectedRowIndex();
+	var taskType = gridId.getCellValue(rowIndex, "TASK_TYPE");	
+	var assignRndCtYn = gridId.getCellValue(rowIndex, "ASSIGN_RND_CT_YN");	
+	var ngvYn = gridId.getCellValue(rowIndex, "NGV_YN");	
+	var nPTaskYn = gridId.getCellValue(rowIndex, "N_P_TASK_YN");
+	var taskDepth = gridId.getCellValue(rowIndex, "TASK_DEPTH");
+	var taskDepthStat = gridId.getCellValue(rowIndex, "TASK_DEPTH_STAT");
+	
+	var obj = {};
+	obj["TASK_TYPE"] = taskType;
+	obj["ASSIGN_RND_CT_YN"] = assignRndCtYn;
+	obj["NGV_YN"] = ngvYn;
+	obj["N_P_TASK_YN"] = nPTaskYn;
+	
+	var bizGp = f_bizGp(obj);
+	var condition = "";
+
+	if (!["C","T","O"].includes(taskType) || bizGp == "FALSE") {
+		if (taskDepth > "4") {
+			condition = "CD_VAL == 'A2' || CD_VAL == 'A3' ? false : true";
+		}
+		else if (taskDepth == "4") {
+			condition = "CD_VAL == 'A2' || CD_VAL == 'A3' || CD_VAL == 'A5' ? false : true";
+		}
+		else if (taskDepth < "4") {
+			if (taskDepth == "1" && taskDepthStat == "A") {
+				condition = "CD_VAL == 'A1' ? true : false ";
+			}
+			else {
+				condition = "CD_VAL == 'A1' || CD_VAL == 'A6' ? true : false ";
+			}
+		}
+	}
+	else if (bizGp != "FALSE") {
+		if (bizGp == "A2") {
+			if (taskDepth > "4") {
+				condition = "CD_VAL == 'A3' ? false : true ";
+			}
+			else if (taskDepth == "4") {
+				condition = "CD_VAL == 'A3' || CD_VAL == 'A5' ? false : true";
+			}
+			else if (taskDepth < "4") {
+				if (taskDepth == "1" && taskDepthStat == "A") {
+					condition = "CD_VAL == 'A1' ? true : false ";
+				}
+				else if (taskDepth == "1" && taskDepthStat != "A") {
+					condition = "CD_VAL == 'A1' || CD_VAL == 'A6' ? true : false ";
+				}
+				else {
+					condition = "CD_VAL == 'A1' || CD_VAL == 'A2' || CD_VAL == 'A6' ? true : false";
+				}
+			}
+		}
+		else if (bizGp == "A3") {
+			if (taskDepth > "4") {
+				condition = "CD_VAL == 'A2' ? false : true ";
+			}
+			else if (taskDepth == "4") {
+				condition = "CD_VAL == 'A2' || CD_VAL == 'A5' ? false : true";
+			}
+			else if (taskDepth < "4") {
+				if (taskDepth == "1" && taskDepthStat == "A") {
+					condition = "CD_VAL == 'A1' ? true : false ";
+				}
+				else if (taskDepth == "1" && taskDepthStat != "A") {
+					condition = "CD_VAL == 'A1' || CD_VAL == 'A6' ? true : false ";
+				}
+				else {
+					condition = "CD_VAL == 'A1' || CD_VAL == 'A3' || CD_VAL == 'A6' ? true : false";
+				}
+			}
+		}
+		else if (bizGp == "A2,A3") {
+			if (taskDepth > "4") {
+				condition = "CD_VAL ^= 'A' ? true : false ";
+			}
+			else if (taskDepth == "4") {
+				condition = "CD_VAL == 'A5' ? false : true";
+			}
+			else if (taskDepth < "4") {
+				if (taskDepth == "1" && taskDepthStat == "A") {
+					condition = "CD_VAL == 'A1' ? true : false ";
+				}
+				else if (taskDepth == "1" && taskDepthStat != "A") {
+					condition = "CD_VAL == 'A1' || CD_VAL == 'A6' ? true : false ";
+				}
+				else {
+					condition = "CD_VAL == 'A1' || CD_VAL == 'A2' || CD_VAL == 'A3' || CD_VAL == 'A6' ? true : false";
+				}
+			}
+		}
+	}
+	cmbGridTaskDetail.setFilter(condition);
+}
+
+function f_bizGp(obj) {
+	var taskType = obj["TASK_TYPE"];
+	var assignRndCtYn = obj["ASSIGN_RND_CT_YN"];
+	var ngvYn = obj["NGV_YN"];
+	var nPTaskYn = obj["N_P_TASK_YN"];
+	
+	if (taskType == "C") {
+		if (assignRndCtYn == "Y" && ngvYn == "N") {
+			return "A2";  // biz_gp: A2
+		}
+		else if (assignRndCtYn == "N" && ngvYn == "Y") {
+			return "A3";  // biz_gp: A3
+		}
+		else if (assignRndCtYn == "N" && ngvYn == "N") {
+			return (nPTaskYn == "N") ? "A2,A3" : "A2";  // biz_gp: A2,A3 : A2
+		}
+	}
+	else if (taskType == "T" && ngvYn == "N") {
+		return "A2";  // biz_gp: A2
+	}
+	else if (taskType == "O") {
+		return "A2";  // biz_gp: A2
+	}
+	
+	return "FALSE";  // 결재
+}
