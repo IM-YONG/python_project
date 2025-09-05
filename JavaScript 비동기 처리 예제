@@ -1,0 +1,109 @@
+// JavaScript 비동기 처리 예제
+*************************
+*** CallBack Function ***
+*************************
+let stocks = {
+  Fruits: ["strawberry", "grapes", "banana", "apple"],
+  liquid: ["water", "ice"],
+  holder: ["cone", "cup", "stick"],
+  toppings: ["chocolate", "peanuts"]
+};
+
+let order = (Fruit_name, call_procedure) => {
+  setTimeout(() => {
+    console.log(`${stocks.Fruits[Fruit_name]} was selected`);
+    call_procedure();
+  }, 2000);
+};
+
+let production = () => {
+  setTimeout(() => {
+    console.log("production has started");
+    setTimeout(() => {
+      console.log("the fruit has been chopped");
+      setTimeout(() => {
+        console.log(`${stocks.liquid[0]} and ${stocks.liquid[1]} was added`);
+        setTimeout(() => {
+          console.log("the machine was started");
+          setTimeout(() => {
+            console.log(`ice cream was placed on ${stocks.holder[0]}`);
+            setTimeout(() => {
+              console.log(`${stocks.toppings[0] was added as toppings`);
+              setTimeout(() => {
+                consloe.log("serve ice cream");
+              }, 2000);
+            }, 3000);
+          }, 2000);
+        }, 1000);
+      }, 1000);
+    }, 2000);
+  }, 0000);
+}
+
+order(0, production);
+
+************************
+*** Promise Function ***
+************************
+A Promise is made
+       |
+    Pending
+    |     | 
+Resolve  Reject
+    |     |
+ .then    | 
+    |   .catch
+ .then   | 
+     |   |
+   .finally
+    
+let stocks = {
+  Fruits: ["strawberry", "grapes", "banana", "apple"],
+  liquid: ["water", "ice"],
+  holder: ["cone", "cup", "stick"],
+  toppings: ["chocolate", "peanuts"]
+};
+
+let is_shop_open = true;
+
+// Relationship between time and work 
+let order = (time, work) => {
+  return new Promise((resolve, reject) => {
+    if(is_shop_open) {
+      setTimeout(() =>{
+        resolve(work());
+      }, time);
+    } else {
+      reject(console.log("our shop is closed"));
+    }
+  });
+};
+
+//Promise chaning
+order(2000, () => console.log(`${stocks.Fruits[0]} was selected`))
+.then(()=>{
+  return order(0000, () => console.log("production has started"));
+})  
+.then(()=>{
+  return order(2000, () => console.log("the fruit has been chopped"));
+})    
+.then(()=>{
+  return order(1000, () => console.log(`${stocks.liquid[0]} and ${stocks.liquid[1]} was added`));
+}) 
+.then(()=>{
+  return order(1000, () => console.log("the machine was started"));
+})  
+.then(()=>{
+  return order(2000, () => console.log(`ice cream was placed on ${stocks.holder[0]}`));
+})   
+.then(()=>{
+  return order(3000, () => console.log(`${stocks.toppings[0] was added as toppings`));
+})  
+.then(()=>{
+  return order(3000, () => console.log("serve ice cream"));
+})
+// Error handling
+.catch(() => console.log("Customer left"))
+// The Finally handling
+.finally (() => consloe.log( "day ended, shop is closed")); 
+                                     
